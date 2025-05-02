@@ -1,6 +1,6 @@
 {
   "name": "@communityox/oxmysql",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "description": "Exports wrapper for oxmysql",
   "types": "MySQL.d.ts",
   "main": "MySQL.js",
