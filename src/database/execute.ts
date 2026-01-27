@@ -4,6 +4,22 @@ import { sleep } from '../utils/sleep';
 import { scheduleTick } from '../utils/scheduleTick';
 import type { CFXCallback } from '../types';
 
+// Command name mapping for node-redis v4 method names
+const COMMAND_MAP: Record<string, string> = {
+  'zrangewithscores': 'zRangeWithScores',
+};
+
+// Serialize argument for sendCommand (raw Redis protocol)
+function serializeArg(arg: any): string {
+  if (arg === null || arg === undefined) {
+    return '';
+  }
+  if (typeof arg === 'object') {
+    return JSON.stringify(arg);
+  }
+  return String(arg);
+}
+
 export async function executeCommand(
   invokingResource: string,
   command: string,
@@ -22,16 +38,17 @@ export async function executeCommand(
 
     if (command.startsWith('_RAW:')) {
       const rawCmd = command.slice(5);
-      result = await client.sendCommand([rawCmd.toUpperCase(), ...args.map(String)]);
+      result = await client.sendCommand([rawCmd.toUpperCase(), ...args.map(serializeArg)]);
     } else {
-      const cmd = command.toLowerCase();
+      const cmdLower = command.toLowerCase();
+      const methodName = COMMAND_MAP[cmdLower] || cmdLower;
       const redisClient = client as any;
 
-      if (typeof redisClient[cmd] === 'function') {
-        result = await redisClient[cmd](...args);
+      if (typeof redisClient[methodName] === 'function') {
+        result = await redisClient[methodName](...args);
       } else {
         // Fallback to sendCommand for any command
-        result = await client.sendCommand([command.toUpperCase(), ...args.map(String)]);
+        result = await client.sendCommand([command.toUpperCase(), ...args.map(serializeArg)]);
       }
     }
 
@@ -75,7 +92,18 @@ export async function executeMulti(
       if (!cmd || typeof cmd.command !== 'string') {
         throw new Error('Invalid command format: each command must have a "command" string property');
       }
-      multi.addCommand([cmd.command.toUpperCase(), ...(cmd.args || []).map(String)]);
+
+      const cmdLower = cmd.command.toLowerCase();
+      const methodName = COMMAND_MAP[cmdLower] || cmdLower;
+      const cmdArgs = cmd.args || [];
+
+      // Try to use typed method on multi for proper argument handling
+      if (typeof (multi as any)[methodName] === 'function') {
+        (multi as any)[methodName](...cmdArgs);
+      } else {
+        // Fallback to addCommand for unsupported commands
+        multi.addCommand([cmd.command.toUpperCase(), ...cmdArgs.map(serializeArg)]);
+      }
     }
 
     const results = await multi.exec();

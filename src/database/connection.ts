@@ -4,6 +4,22 @@ import { client } from './pool';
 
 (Symbol as any).dispose ??= Symbol('Symbol.dispose');
 
+// Command name mapping for node-redis v4 method names
+const COMMAND_MAP: Record<string, string> = {
+  'zrangewithscores': 'zRangeWithScores',
+};
+
+// Serialize argument for sendCommand (raw Redis protocol)
+function serializeArg(arg: any): string {
+  if (arg === null || arg === undefined) {
+    return '';
+  }
+  if (typeof arg === 'object') {
+    return JSON.stringify(arg);
+  }
+  return String(arg);
+}
+
 export class RedisConnection {
   private multiMode: boolean = false;
   private multiQueue: { command: string; args: any[] }[] = [];
@@ -18,15 +34,16 @@ export class RedisConnection {
       return 'QUEUED';
     }
 
-    const cmd = command.toLowerCase();
+    const cmdLower = command.toLowerCase();
+    const methodName = COMMAND_MAP[cmdLower] || cmdLower;
     const redisClient = client as any;
 
-    if (typeof redisClient[cmd] === 'function') {
-      return await redisClient[cmd](...args);
+    if (typeof redisClient[methodName] === 'function') {
+      return await redisClient[methodName](...args);
     }
 
     // Fallback to sendCommand for any command
-    return await client.sendCommand([command.toUpperCase(), ...args.map(String)]);
+    return await client.sendCommand([command.toUpperCase(), ...args.map(serializeArg)]);
   }
 
   multi() {
@@ -43,11 +60,13 @@ export class RedisConnection {
     const multi = client.multi();
 
     for (const { command, args } of this.multiQueue) {
-      const cmd = command.toLowerCase();
-      if (typeof (multi as any)[cmd] === 'function') {
-        (multi as any)[cmd](...args);
+      const cmdLower = command.toLowerCase();
+      const methodName = COMMAND_MAP[cmdLower] || cmdLower;
+
+      if (typeof (multi as any)[methodName] === 'function') {
+        (multi as any)[methodName](...args);
       } else {
-        multi.addCommand([command.toUpperCase(), ...args.map(String)]);
+        multi.addCommand([command.toUpperCase(), ...args.map(serializeArg)]);
       }
     }
 

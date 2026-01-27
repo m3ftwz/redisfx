@@ -466,17 +466,13 @@ Redis.zadd = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(options, cb);
-  const args: any[] = [key];
+  const memberObj = { score, value: String(member) };
+  const args: any[] = [key, memberObj];
 
   if (options && typeof options === 'object') {
-    if (options.NX) args.push('NX');
-    if (options.XX) args.push('XX');
-    if (options.GT) args.push('GT');
-    if (options.LT) args.push('LT');
-    if (options.CH) args.push('CH');
+    args.push(options);
   }
 
-  args.push(score, member);
   return executeCommand(invokingResource, 'ZADD', args, callback, isPromise);
 };
 
@@ -501,7 +497,7 @@ Redis.zrangeWithScores = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(cb);
-  return executeCommand(invokingResource, 'ZRANGE', [key, start, stop, 'WITHSCORES'], callback, isPromise);
+  return executeCommand(invokingResource, 'ZRANGEWITHSCORES', [key, start, stop], callback, isPromise);
 };
 
 Redis.zrem = (
@@ -599,8 +595,7 @@ Redis.scan = (
   const args: any[] = [cursor];
 
   if (options && typeof options === 'object') {
-    if (options.MATCH) args.push('MATCH', options.MATCH);
-    if (options.COUNT) args.push('COUNT', options.COUNT);
+    args.push(options);
   }
 
   return executeCommand(invokingResource, 'SCAN', args, callback, isPromise);
