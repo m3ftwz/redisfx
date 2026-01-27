@@ -4,9 +4,9 @@ import { sleep } from '../utils/sleep';
 import { scheduleTick } from '../utils/scheduleTick';
 import type { CFXCallback } from '../types';
 
-// Command name mapping for node-redis v4 method names
+// Special command mappings for node-redis v4 (most use UPPERCASE directly)
 const COMMAND_MAP: Record<string, string> = {
-  'zrangewithscores': 'zRangeWithScores',
+  'ZRANGEWITHSCORES': 'zRangeWithScores', // This one has no uppercase equivalent
 };
 
 // Serialize argument for sendCommand (raw Redis protocol)
@@ -40,15 +40,14 @@ export async function executeCommand(
       const rawCmd = command.slice(5);
       result = await client.sendCommand([rawCmd.toUpperCase(), ...args.map(serializeArg)]);
     } else {
-      const cmdLower = command.toLowerCase();
-      const methodName = COMMAND_MAP[cmdLower] || cmdLower;
+      const methodName = COMMAND_MAP[command] || command;
       const redisClient = client as any;
 
       if (typeof redisClient[methodName] === 'function') {
         result = await redisClient[methodName](...args);
       } else {
         // Fallback to sendCommand for any command
-        result = await client.sendCommand([command.toUpperCase(), ...args.map(serializeArg)]);
+        result = await client.sendCommand([command, ...args.map(serializeArg)]);
       }
     }
 
@@ -93,8 +92,7 @@ export async function executeMulti(
         throw new Error('Invalid command format: each command must have a "command" string property');
       }
 
-      const cmdLower = cmd.command.toLowerCase();
-      const methodName = COMMAND_MAP[cmdLower] || cmdLower;
+      const methodName = COMMAND_MAP[cmd.command] || cmd.command;
       const cmdArgs = cmd.args || [];
 
       // Try to use typed method on multi for proper argument handling
@@ -102,7 +100,7 @@ export async function executeMulti(
         (multi as any)[methodName](...cmdArgs);
       } else {
         // Fallback to addCommand for unsupported commands
-        multi.addCommand([cmd.command.toUpperCase(), ...cmdArgs.map(serializeArg)]);
+        multi.addCommand([cmd.command, ...cmdArgs.map(serializeArg)]);
       }
     }
 

@@ -4,9 +4,9 @@ import { client } from './pool';
 
 (Symbol as any).dispose ??= Symbol('Symbol.dispose');
 
-// Command name mapping for node-redis v4 method names
+// Special command mappings for node-redis v4 (most use UPPERCASE directly)
 const COMMAND_MAP: Record<string, string> = {
-  'zrangewithscores': 'zRangeWithScores',
+  'ZRANGEWITHSCORES': 'zRangeWithScores', // This one has no uppercase equivalent
 };
 
 // Serialize argument for sendCommand (raw Redis protocol)
@@ -34,8 +34,7 @@ export class RedisConnection {
       return 'QUEUED';
     }
 
-    const cmdLower = command.toLowerCase();
-    const methodName = COMMAND_MAP[cmdLower] || cmdLower;
+    const methodName = COMMAND_MAP[command] || command;
     const redisClient = client as any;
 
     if (typeof redisClient[methodName] === 'function') {
@@ -43,7 +42,7 @@ export class RedisConnection {
     }
 
     // Fallback to sendCommand for any command
-    return await client.sendCommand([command.toUpperCase(), ...args.map(serializeArg)]);
+    return await client.sendCommand([command, ...args.map(serializeArg)]);
   }
 
   multi() {
@@ -60,13 +59,12 @@ export class RedisConnection {
     const multi = client.multi();
 
     for (const { command, args } of this.multiQueue) {
-      const cmdLower = command.toLowerCase();
-      const methodName = COMMAND_MAP[cmdLower] || cmdLower;
+      const methodName = COMMAND_MAP[command] || command;
 
       if (typeof (multi as any)[methodName] === 'function') {
         (multi as any)[methodName](...args);
       } else {
-        multi.addCommand([command.toUpperCase(), ...args.map(serializeArg)]);
+        multi.addCommand([command, ...args.map(serializeArg)]);
       }
     }
 
