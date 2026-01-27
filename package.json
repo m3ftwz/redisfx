@@ -1,6 +1,6 @@
 {
   "name": "fivemredis",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "FXServer to Redis communication via node-redis",
   "repository": {
     "type": "git",
