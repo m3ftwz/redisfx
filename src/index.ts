@@ -42,14 +42,7 @@ Redis.set = (
   const args: any[] = [key, value];
 
   if (options && typeof options === 'object') {
-    if (options.EX) args.push('EX', options.EX);
-    if (options.PX) args.push('PX', options.PX);
-    if (options.EXAT) args.push('EXAT', options.EXAT);
-    if (options.PXAT) args.push('PXAT', options.PXAT);
-    if (options.NX) args.push('NX');
-    if (options.XX) args.push('XX');
-    if (options.KEEPTTL) args.push('KEEPTTL');
-    if (options.GET) args.push('GET');
+    args.push(options);
   }
 
   return executeCommand(invokingResource, 'SET', args, callback, isPromise);
