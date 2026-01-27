@@ -18,19 +18,26 @@ export async function executeCommand(
   const startTime = performance.now();
 
   try {
-    const cmd = command.toLowerCase();
-    const redisClient = client as any;
     let result: any;
 
-    if (typeof redisClient[cmd] === 'function') {
-      result = await redisClient[cmd](...args);
+    if (command.startsWith('_RAW:')) {
+      const rawCmd = command.slice(5);
+      result = await client.sendCommand([rawCmd.toUpperCase(), ...args.map(String)]);
     } else {
-      // Fallback to sendCommand for any command
-      result = await client.sendCommand([command.toUpperCase(), ...args.map(String)]);
+      const cmd = command.toLowerCase();
+      const redisClient = client as any;
+
+      if (typeof redisClient[cmd] === 'function') {
+        result = await redisClient[cmd](...args);
+      } else {
+        // Fallback to sendCommand for any command
+        result = await client.sendCommand([command.toUpperCase(), ...args.map(String)]);
+      }
     }
 
     const executionTime = performance.now() - startTime;
-    logCommand(invokingResource, command, args, executionTime);
+    const logCmd = command.startsWith('_RAW:') ? command.slice(5) : command;
+    logCommand(invokingResource, logCmd, args, executionTime);
 
     if (cb) {
       cb(result);
@@ -38,7 +45,8 @@ export async function executeCommand(
 
     return result;
   } catch (err: any) {
-    logError(invokingResource, cb, isPromise, err, command, args);
+    const logCmd = command.startsWith('_RAW:') ? command.slice(5) : command;
+    logError(invokingResource, cb, isPromise, err, logCmd, args);
 
     if (cb && isPromise) {
       return;
@@ -63,13 +71,11 @@ export async function executeMulti(
   try {
     const multi = client.multi();
 
-    for (const { command, args } of commands) {
-      const cmd = command.toLowerCase();
-      if (typeof (multi as any)[cmd] === 'function') {
-        (multi as any)[cmd](...args);
-      } else {
-        multi.addCommand([command.toUpperCase(), ...args.map(String)]);
+    for (const cmd of commands) {
+      if (!cmd || typeof cmd.command !== 'string') {
+        throw new Error('Invalid command format: each command must have a "command" string property');
       }
+      multi.addCommand([cmd.command.toUpperCase(), ...(cmd.args || []).map(String)]);
     }
 
     const results = await multi.exec();

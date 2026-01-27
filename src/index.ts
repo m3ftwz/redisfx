@@ -140,7 +140,7 @@ Redis.mget = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(cb);
-  return executeCommand(invokingResource, 'MGET', keys, callback, isPromise);
+  return executeCommand(invokingResource, 'MGET', [keys], callback, isPromise);
 };
 
 Redis.mset = (
@@ -150,11 +150,7 @@ Redis.mset = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(cb);
-  const args: any[] = [];
-  for (const [key, value] of Object.entries(keyValues)) {
-    args.push(key, value);
-  }
-  return executeCommand(invokingResource, 'MSET', args, callback, isPromise);
+  return executeCommand(invokingResource, 'MSET', [keyValues], callback, isPromise);
 };
 
 // ============================================
@@ -192,11 +188,7 @@ Redis.hmset = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(cb);
-  const args: any[] = [key];
-  for (const [field, value] of Object.entries(fieldValues)) {
-    args.push(field, value);
-  }
-  return executeCommand(invokingResource, 'HSET', args, callback, isPromise);
+  return executeCommand(invokingResource, 'HSET', [key, fieldValues], callback, isPromise);
 };
 
 Redis.hgetall = (
@@ -709,7 +701,7 @@ Redis.raw = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(cb);
-  return executeCommand(invokingResource, command, args, callback, isPromise);
+  return executeCommand(invokingResource, '_RAW:' + command, args, callback, isPromise);
 };
 
 // ============================================
