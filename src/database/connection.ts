@@ -4,7 +4,7 @@ import { client } from './pool';
 
 (Symbol as any).dispose ??= Symbol('Symbol.dispose');
 
-// Special command mappings for node-redis v4 (most use UPPERCASE directly)
+// Special command mappings for node-redis (most use UPPERCASE directly)
 const COMMAND_MAP: Record<string, string> = {
   'ZRANGEWITHSCORES': 'zRangeWithScores',
   'SRANDMEMBERCOUNT': 'sRandMemberCount',

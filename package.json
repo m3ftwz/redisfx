@@ -25,7 +25,7 @@
     "postinstall": "bun bootstrap"
   },
   "dependencies": {
-    "redis": "^4.7.0",
+    "redis": "^5.10.0",
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {

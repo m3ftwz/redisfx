@@ -594,7 +594,7 @@ Redis.scan = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(options, cb);
-  const args: any[] = [cursor];
+  const args: any[] = [String(cursor)];
 
   if (options && typeof options === 'object') {
     args.push(options);

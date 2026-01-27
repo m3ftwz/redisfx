@@ -4,7 +4,7 @@ import { sleep } from '../utils/sleep';
 import { scheduleTick } from '../utils/scheduleTick';
 import type { CFXCallback } from '../types';
 
-// Special command mappings for node-redis v4 (most use UPPERCASE directly)
+// Special command mappings for node-redis (most use UPPERCASE directly)
 const COMMAND_MAP: Record<string, string> = {
   'ZRANGEWITHSCORES': 'zRangeWithScores',
   'SRANDMEMBERCOUNT': 'sRandMemberCount',
