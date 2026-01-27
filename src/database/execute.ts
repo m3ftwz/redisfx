@@ -6,7 +6,8 @@ import type { CFXCallback } from '../types';
 
 // Special command mappings for node-redis v4 (most use UPPERCASE directly)
 const COMMAND_MAP: Record<string, string> = {
-  'ZRANGEWITHSCORES': 'zRangeWithScores', // This one has no uppercase equivalent
+  'ZRANGEWITHSCORES': 'zRangeWithScores',
+  'SRANDMEMBERCOUNT': 'sRandMemberCount',
 };
 
 // Serialize argument for sendCommand (raw Redis protocol)

@@ -56,7 +56,7 @@ Redis.del = (
 ) => {
   const callback = setCallback(cb);
   const keyArray = Array.isArray(keys) ? keys : [keys];
-  return executeCommand(invokingResource, 'DEL', keyArray, callback, isPromise);
+  return executeCommand(invokingResource, 'DEL', [keyArray], callback, isPromise);
 };
 
 Redis.exists = (
@@ -67,7 +67,7 @@ Redis.exists = (
 ) => {
   const callback = setCallback(cb);
   const keyArray = Array.isArray(keys) ? keys : [keys];
-  return executeCommand(invokingResource, 'EXISTS', keyArray, callback, isPromise);
+  return executeCommand(invokingResource, 'EXISTS', [keyArray], callback, isPromise);
 };
 
 Redis.expire = (
@@ -210,7 +210,7 @@ Redis.hdel = (
 ) => {
   const callback = setCallback(cb);
   const fieldArray = Array.isArray(fields) ? fields : [fields];
-  return executeCommand(invokingResource, 'HDEL', [key, ...fieldArray], callback, isPromise);
+  return executeCommand(invokingResource, 'HDEL', [key, fieldArray], callback, isPromise);
 };
 
 Redis.hincrby = (
@@ -279,7 +279,7 @@ Redis.lpush = (
 ) => {
   const callback = setCallback(cb);
   const valueArray = Array.isArray(values) ? values : [values];
-  return executeCommand(invokingResource, 'LPUSH', [key, ...valueArray], callback, isPromise);
+  return executeCommand(invokingResource, 'LPUSH', [key, valueArray], callback, isPromise);
 };
 
 Redis.rpush = (
@@ -291,7 +291,7 @@ Redis.rpush = (
 ) => {
   const callback = setCallback(cb);
   const valueArray = Array.isArray(values) ? values : [values];
-  return executeCommand(invokingResource, 'RPUSH', [key, ...valueArray], callback, isPromise);
+  return executeCommand(invokingResource, 'RPUSH', [key, valueArray], callback, isPromise);
 };
 
 Redis.lpop = (
@@ -384,7 +384,7 @@ Redis.sadd = (
 ) => {
   const callback = setCallback(cb);
   const memberArray = Array.isArray(members) ? members : [members];
-  return executeCommand(invokingResource, 'SADD', [key, ...memberArray], callback, isPromise);
+  return executeCommand(invokingResource, 'SADD', [key, memberArray], callback, isPromise);
 };
 
 Redis.srem = (
@@ -396,7 +396,7 @@ Redis.srem = (
 ) => {
   const callback = setCallback(cb);
   const memberArray = Array.isArray(members) ? members : [members];
-  return executeCommand(invokingResource, 'SREM', [key, ...memberArray], callback, isPromise);
+  return executeCommand(invokingResource, 'SREM', [key, memberArray], callback, isPromise);
 };
 
 Redis.smembers = (
@@ -448,8 +448,10 @@ Redis.srandmember = (
   isPromise?: boolean
 ) => {
   const callback = setCallback(count, cb);
-  const args = typeof count === 'number' ? [key, count] : [key];
-  return executeCommand(invokingResource, 'SRANDMEMBER', args, callback, isPromise);
+  if (typeof count === 'number') {
+    return executeCommand(invokingResource, 'SRANDMEMBERCOUNT', [key, count], callback, isPromise);
+  }
+  return executeCommand(invokingResource, 'SRANDMEMBER', [key], callback, isPromise);
 };
 
 // ============================================
@@ -509,7 +511,7 @@ Redis.zrem = (
 ) => {
   const callback = setCallback(cb);
   const memberArray = Array.isArray(members) ? members : [members];
-  return executeCommand(invokingResource, 'ZREM', [key, ...memberArray], callback, isPromise);
+  return executeCommand(invokingResource, 'ZREM', [key, memberArray], callback, isPromise);
 };
 
 Redis.zscore = (
