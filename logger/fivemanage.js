@@ -1,5 +1,3 @@
-// https://fivemanage.com/?ref=overextended
-
 const apiKey = GetConvar('FIVEMANAGE_LOGS_API_KEY', '');
 
 if (!apiKey) return console.warning(`convar "FIVEMANAGE_LOGS_API_KEY" has not been set`);
@@ -9,7 +7,7 @@ const endpoint = 'https://api.fivemanage.com/api/logs/batch';
 const headers = {
   ['Content-Type']: 'application/json',
   ['Authorization']: apiKey,
-  ['User-Agent']: 'oxmysql',
+  ['User-Agent']: 'fivemredis',
 };
 
 async function sendLogs() {

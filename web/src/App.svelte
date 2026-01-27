@@ -11,12 +11,12 @@
 
   interface OpenData {
     resources: string[];
-    totalQueries: number;
-    slowQueries: number;
+    totalCommands: number;
+    slowCommands: number;
     totalTime: number;
     chartData: {
       labels: string[];
-      data: { queries: number; time: number }[];
+      data: { commands: number; time: number }[];
     };
   }
 
@@ -27,9 +27,9 @@
     $visible = true;
     $resources = data.resources;
     $generalData = {
-      queries: data.totalQueries,
-      slowQueries: data.slowQueries,
-      timeQuerying: data.totalTime,
+      commands: data.totalCommands,
+      slowCommands: data.slowCommands,
+      timeExecuting: data.totalTime,
     };
     $chartData = {
       labels: data.chartData.labels,
@@ -41,17 +41,17 @@
     {
       action: 'openUI',
       data: {
-        resources: ['ox_core', 'oxmysql', 'ox_inventory', 'ox_doorlock', 'ox_lib', 'ox_vehicleshop', 'ox_target'],
-        slowQueries: 13,
-        totalQueries: 332,
+        resources: ['ox_core', 'fivemredis', 'ox_inventory', 'ox_doorlock', 'ox_lib', 'ox_vehicleshop', 'ox_target'],
+        slowCommands: 13,
+        totalCommands: 332,
         totalTime: 230123,
         chartData: {
-          labels: ['oxmysql', 'ox_core', 'ox_inventory', 'ox_doorlock'],
+          labels: ['fivemredis', 'ox_core', 'ox_inventory', 'ox_doorlock'],
           data: [
-            { queries: 25, time: 133 },
-            { queries: 5, time: 12 },
-            { queries: 3, time: 2 },
-            { queries: 72, time: 133 },
+            { commands: 25, time: 133 },
+            { commands: 5, time: 12 },
+            { commands: 3, time: 2 },
+            { commands: 72, time: 133 },
           ],
         },
       },

@@ -1,7 +1,7 @@
 import fetch from 'node-fetch';
 
 (() => {
-  if (GetConvarInt('mysql_versioncheck', 1) === 0) return;
+  if (GetConvarInt('redis_versioncheck', 1) === 0) return;
 
   const resourceName = GetCurrentResourceName();
   const currentVersion = GetResourceMetadata(resourceName, 'version', 0)?.match(/(\d+)\.(\d+)\.(\d+)/);
@@ -9,8 +9,8 @@ import fetch from 'node-fetch';
   if (!currentVersion) return;
 
   setTimeout(async () => {
-    const response = await fetch(`https://api.github.com/repos/communityox/oxmysql/releases/latest`).catch((err) => {
-      console.warn(`Failed to retrieve latest version of oxmysql (${err.code}).`);
+    const response = await fetch(`https://api.github.com/repos/m3ftwz/fivemredis/releases/latest`).catch((err) => {
+      console.warn(`Failed to retrieve latest version of fivemredis (${err.code}).`);
     });
 
     if (response?.status !== 200) return;

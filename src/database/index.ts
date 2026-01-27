@@ -1,14 +1,14 @@
 import { setDebug } from '../config';
 import { sleep } from '../utils/sleep';
-import { pool, createConnectionPool } from './pool';
+import { client, createRedisClient } from './pool';
 
 setTimeout(async () => {
   setDebug();
 
-  while (!pool) {
-    await createConnectionPool();
+  while (!client) {
+    await createRedisClient();
 
-    if (!pool) await sleep(30000);
+    if (!client) await sleep(30000);
   }
 });
 
@@ -17,7 +17,5 @@ setInterval(() => {
 }, 1000);
 
 export * from './connection';
-export * from './rawQuery';
-export * from './rawExecute';
-export * from './rawTransaction';
+export * from './execute';
 export * from './pool';

@@ -1,9 +1,9 @@
-import { mysql_debug, mysql_log_size, mysql_slow_query_warning, mysql_ui } from '../config';
-import type { CFXCallback, CFXParameters } from '../types';
-import { dbVersion } from '../database';
+import { redis_debug, redis_log_size, redis_slow_query_warning, redis_ui } from '../config';
+import type { CFXCallback, CommandData, CommandLog } from '../types';
+import { redisVersion } from '../database';
 
 let loggerResource = '';
-let loggerService = GetConvar('mysql_logger_service', '');
+let loggerService = GetConvar('redis_logger_service', '');
 
 if (loggerService) {
   if (loggerService.startsWith('@')) {
@@ -25,26 +25,25 @@ export function logError(
   invokingResource: string,
   cb: CFXCallback | undefined,
   isPromise: boolean | undefined,
-  err: any | string = '', // i cbf typing the error right now
-  query?: string,
-  parameters?: CFXParameters,
-  includeParameters?: boolean
+  err: any | string = '',
+  command?: string,
+  args?: any[],
+  includeArgs?: boolean
 ) {
   const message = typeof err === 'object' ? err.message : err.replace(/SCRIPT ERROR: citizen:[\w\/\.]+:\d+[:\s]+/, '');
 
-  const output = `${invokingResource} was unable to execute a query!${query ? `\n${`Query: ${query}`}` : ''}${
-    includeParameters ? `\n${JSON.stringify(parameters)}` : ''
+  const commandStr = command ? `${command}${args ? ' ' + JSON.stringify(args) : ''}` : '';
+  const output = `${invokingResource} was unable to execute a Redis command!${commandStr ? `\nCommand: ${commandStr}` : ''}${
+    includeArgs ? `\n${JSON.stringify(args)}` : ''
   }\n${message}`;
 
-  TriggerEvent('oxmysql:error', {
-    query: query,
-    parameters: parameters,
+  TriggerEvent('fivemredis:error', {
+    command: command,
+    args: args,
     message: message,
     err: err,
     resource: invokingResource,
   });
-
-  if (typeof err === 'object' && err.message) delete err.sqlMessage;
 
   logger({
     level: 'error',
@@ -64,51 +63,42 @@ export function logError(
   console.error(output);
 }
 
-interface QueryData {
-  date: number;
-  query: string;
-  executionTime: number;
-  slow?: boolean;
-}
+const logStorage: CommandLog = {};
 
-type QueryLog = Record<string, QueryData[]>;
-
-const logStorage: QueryLog = {};
-
-export const logQuery = (
+export const logCommand = (
   invokingResource: string,
-  query: string,
-  executionTime: number,
-  parameters?: CFXParameters
+  command: string,
+  args: any[],
+  executionTime: number
 ) => {
   if (
-    executionTime >= mysql_slow_query_warning ||
-    (mysql_debug && (!Array.isArray(mysql_debug) || mysql_debug.includes(invokingResource)))
+    executionTime >= redis_slow_query_warning ||
+    (redis_debug && (!Array.isArray(redis_debug) || redis_debug.includes(invokingResource)))
   ) {
+    const argsStr = args && args.length > 0 ? ` ${JSON.stringify(args)}` : '';
     console.log(
-      `${dbVersion} ^3${invokingResource} took ${executionTime.toFixed(4)}ms to execute a query!\n${query}${
-        parameters ? ` ${JSON.stringify(parameters)}` : ''
-      }^0`
+      `${redisVersion} ^3${invokingResource} took ${executionTime.toFixed(4)}ms to execute a command!\n${command}${argsStr}^0`
     );
   }
 
-  if (!mysql_ui) return;
+  if (!redis_ui) return;
 
   if (!logStorage[invokingResource]) logStorage[invokingResource] = [];
-  else if (logStorage[invokingResource].length > mysql_log_size) logStorage[invokingResource].splice(0, 1);
+  else if (logStorage[invokingResource].length > redis_log_size) logStorage[invokingResource].splice(0, 1);
 
   logStorage[invokingResource].push({
-    query,
+    command,
+    args,
     executionTime,
     date: Date.now(),
-    slow: executionTime >= mysql_slow_query_warning ? true : undefined,
+    slow: executionTime >= redis_slow_query_warning ? true : undefined,
   });
 };
 
 RegisterCommand(
-  'mysql',
+  'redis',
   (source: number) => {
-    if (!mysql_ui) return;
+    if (!redis_ui) return;
 
     if (source < 1) {
       // source is 0 when received from the server
@@ -116,27 +106,27 @@ RegisterCommand(
       return;
     }
 
-    let totalQueries: number = 0;
+    let totalCommands: number = 0;
     let totalTime = 0;
-    let slowQueries = 0;
-    let chartData: { labels: string[]; data: { queries: number; time: number }[] } = { labels: [], data: [] };
+    let slowCommands = 0;
+    let chartData: { labels: string[]; data: { commands: number; time: number }[] } = { labels: [], data: [] };
 
     for (const resource in logStorage) {
-      const queries = logStorage[resource];
+      const commands = logStorage[resource];
       let totalResourceTime = 0;
 
-      totalQueries += queries.length;
-      totalTime += queries.reduce((totalTime, query) => (totalTime += query.executionTime), 0);
-      slowQueries += queries.reduce((slowQueries, query) => (slowQueries += query.slow ? 1 : 0), 0);
-      totalResourceTime += queries.reduce((totalResourceTime, query) => (totalResourceTime += query.executionTime), 0);
+      totalCommands += commands.length;
+      totalTime += commands.reduce((totalTime, cmd) => (totalTime += cmd.executionTime), 0);
+      slowCommands += commands.reduce((slowCount, cmd) => (slowCount += cmd.slow ? 1 : 0), 0);
+      totalResourceTime += commands.reduce((totalResourceTime, cmd) => (totalResourceTime += cmd.executionTime), 0);
       chartData.labels.push(resource);
-      chartData.data.push({ queries: queries.length, time: totalResourceTime });
+      chartData.data.push({ commands: commands.length, time: totalResourceTime });
     }
 
-    emitNet(`oxmysql:openUi`, source, {
+    emitNet(`fivemredis:openUi`, source, {
       resources: Object.keys(logStorage),
-      totalQueries,
-      slowQueries,
+      totalCommands,
+      slowCommands,
       totalTime,
       chartData,
     });
@@ -144,11 +134,11 @@ RegisterCommand(
   true
 );
 
-const sortQueries = (queries: QueryData[], sort: { id: 'query' | 'executionTime'; desc: boolean }) => {
-  const sortedQueries = [...queries].sort((a, b) => {
+const sortCommands = (commands: CommandData[], sort: { id: 'command' | 'executionTime'; desc: boolean }) => {
+  const sortedCommands = [...commands].sort((a, b) => {
     switch (sort.id) {
-      case 'query':
-        return a.query > b.query ? 1 : -1;
+      case 'command':
+        return a.command > b.command ? 1 : -1;
       case 'executionTime':
         return a.executionTime - b.executionTime;
       default:
@@ -156,49 +146,49 @@ const sortQueries = (queries: QueryData[], sort: { id: 'query' | 'executionTime'
     }
   });
 
-  return sort.desc ? sortedQueries.reverse() : sortedQueries;
+  return sort.desc ? sortedCommands.reverse() : sortedCommands;
 };
 
 onNet(
-  `oxmysql:fetchResource`,
+  `fivemredis:fetchResource`,
   (data: {
     resource: string;
     pageIndex: number;
     search: string;
-    sortBy?: { id: 'query' | 'executionTime'; desc: boolean }[];
+    sortBy?: { id: 'command' | 'executionTime'; desc: boolean }[];
   }) => {
-    if (typeof data.resource !== 'string' || !IsPlayerAceAllowed(source as unknown as string, 'command.mysql')) return;
+    if (typeof data.resource !== 'string' || !IsPlayerAceAllowed(source as unknown as string, 'command.redis')) return;
 
     if (data.search) data.search = data.search.toLowerCase();
 
     const resourceLog = data.search
-      ? logStorage[data.resource].filter((q) => q.query.toLowerCase().includes(data.search))
+      ? logStorage[data.resource].filter((c) => c.command.toLowerCase().includes(data.search))
       : logStorage[data.resource];
 
     const sort = data.sortBy && data.sortBy.length > 0 ? data.sortBy[0] : false;
     const startRow = data.pageIndex * 10;
     const endRow = startRow + 10;
-    const queries = sort ? sortQueries(resourceLog, sort).slice(startRow, endRow) : resourceLog.slice(startRow, endRow);
+    const commands = sort ? sortCommands(resourceLog, sort).slice(startRow, endRow) : resourceLog.slice(startRow, endRow);
     const pageCount = Math.ceil(resourceLog.length / 10);
 
-    if (!queries) return;
+    if (!commands) return;
 
     let resourceTime = 0;
-    let resourceSlowQueries = 0;
-    const resourceQueriesCount = resourceLog.length;
+    let resourceSlowCommands = 0;
+    const resourceCommandsCount = resourceLog.length;
 
-    for (let i = 0; i < resourceQueriesCount; i++) {
-      const query = resourceLog[i];
+    for (let i = 0; i < resourceCommandsCount; i++) {
+      const cmd = resourceLog[i];
 
-      resourceTime += query.executionTime;
-      if (query.slow) resourceSlowQueries += 1;
+      resourceTime += cmd.executionTime;
+      if (cmd.slow) resourceSlowCommands += 1;
     }
 
-    emitNet(`oxmysql:loadResource`, source, {
-      queries,
+    emitNet(`fivemredis:loadResource`, source, {
+      commands,
       pageCount,
-      resourceQueriesCount,
-      resourceSlowQueries,
+      resourceCommandsCount,
+      resourceSlowCommands,
       resourceTime,
     });
   }

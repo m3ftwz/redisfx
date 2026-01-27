@@ -1,4 +1,4 @@
-RegisterNetEvent('oxmysql:openUi', function(data)
+RegisterNetEvent('fivemredis:openUi', function(data)
     SendNUIMessage({
         action = 'openUI',
         data = data
@@ -12,11 +12,11 @@ RegisterNUICallback('exit', function(_, cb)
 end)
 
 RegisterNUICallback('fetchResource', function(data, cb)
-    TriggerServerEvent('oxmysql:fetchResource', data)
+    TriggerServerEvent('fivemredis:fetchResource', data)
     cb(true)
 end)
 
-RegisterNetEvent('oxmysql:loadResource', function(data)
+RegisterNetEvent('fivemredis:loadResource', function(data)
     SendNUIMessage({
         action = 'loadResource',
         data = data

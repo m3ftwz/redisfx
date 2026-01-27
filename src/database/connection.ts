@@ -1,75 +1,71 @@
-import type { Connection, PoolConnection, TypeCast } from 'mysql2/promise';
 import { scheduleTick } from '../utils/scheduleTick';
 import { sleep } from '../utils/sleep';
-import { pool } from './pool';
-import type { CFXParameters } from 'types';
-import { typeCastExecute } from 'utils/typeCast';
+import { client } from './pool';
 
 (Symbol as any).dispose ??= Symbol('Symbol.dispose');
 
-const activeConnections: Record<string, MySql> = {};
+export class RedisConnection {
+  private multiMode: boolean = false;
+  private multiQueue: { command: string; args: any[] }[] = [];
 
-interface PromisePoolConnection extends Connection {
-  connection: PoolConnection;
-  release: PoolConnection['release'];
-}
+  constructor() {}
 
-export class MySql {
-  id: number;
-  connection: PromisePoolConnection;
-  transaction?: boolean;
-
-  constructor(connection: PromisePoolConnection) {
-    this.id = connection.connection.threadId;
-    this.connection = connection;
-    activeConnections[this.id] = this;
-  }
-
-  async query(query: string, values: CFXParameters = []) {
+  async execute(command: string, ...args: any[]) {
     scheduleTick();
 
-    const [result] = await this.connection.query(query, values);
-    return result;
+    if (this.multiMode) {
+      this.multiQueue.push({ command, args });
+      return 'QUEUED';
+    }
+
+    const cmd = command.toLowerCase();
+    const redisClient = client as any;
+
+    if (typeof redisClient[cmd] === 'function') {
+      return await redisClient[cmd](...args);
+    }
+
+    // Fallback to sendCommand for any command
+    return await client.sendCommand([command.toUpperCase(), ...args.map(String)]);
   }
 
-  async execute(query: string, values: CFXParameters = []) {
-    scheduleTick();
-
-    const [result] = await this.connection.execute({
-      sql: query,
-      values: values,
-      typeCast: typeCastExecute,
-    });
-    return result;
+  multi() {
+    this.multiMode = true;
+    this.multiQueue = [];
   }
 
-  beginTransaction() {
-    this.transaction = true;
-    return this.connection.beginTransaction();
+  async exec() {
+    if (!this.multiMode) {
+      throw new Error('EXEC without MULTI');
+    }
+
+    this.multiMode = false;
+    const multi = client.multi();
+
+    for (const { command, args } of this.multiQueue) {
+      const cmd = command.toLowerCase();
+      if (typeof (multi as any)[cmd] === 'function') {
+        (multi as any)[cmd](...args);
+      } else {
+        multi.addCommand([command.toUpperCase(), ...args.map(String)]);
+      }
+    }
+
+    this.multiQueue = [];
+    return await multi.exec();
   }
 
-  rollback() {
-    delete this.transaction;
-    return this.connection.rollback();
-  }
-
-  commit() {
-    delete this.transaction;
-    return this.connection.commit();
+  discard() {
+    this.multiMode = false;
+    this.multiQueue = [];
   }
 
   [Symbol.dispose]() {
-    if (this.transaction) this.commit();
-
-    delete activeConnections[this.id];
-    this.connection.release();
+    // Redis client is shared, no cleanup needed per-connection
   }
 }
 
-export async function getConnection(connectionId?: number) {
-  while (!pool) await sleep(0);
-
-  return connectionId
-    ? activeConnections[connectionId]
-    : new MySql((await pool.getConnection()) as unknown as PromisePoolConnection);
+export async function getConnection() {
+  while (!client) await sleep(0);
+  return new RedisConnection();
 }

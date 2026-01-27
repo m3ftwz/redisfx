@@ -1,21 +1,22 @@
 import { writable } from 'svelte/store';
 
-export interface QueryData {
+export interface CommandData {
   date: number;
-  query: string;
+  command: string;
+  args?: any[];
   executionTime: number;
   slow?: boolean;
 }
 
-export const queries = writable<QueryData[]>([]);
+export const commands = writable<CommandData[]>([]);
 
 export const resourceData = writable<{
-  resourceQueriesCount: number;
-  resourceSlowQueries: number;
+  resourceCommandsCount: number;
+  resourceSlowCommands: number;
   resourceTime: number;
 }>({
-  resourceQueriesCount: 0,
-  resourceSlowQueries: 0,
+  resourceCommandsCount: 0,
+  resourceSlowCommands: 0,
   resourceTime: 0,
 });
 

@@ -124,6 +124,6 @@ dist
 .pnp.*
 
 # Wrapper
-lib/MySQL.js
-lib/MySQL.d.ts
-lib/MySQL.js.map
+lib/Redis.js
+lib/Redis.d.ts
+lib/Redis.js.map

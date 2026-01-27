@@ -1,46 +1,52 @@
-import { getConnectionOptions, mysql_transaction_isolation_level } from 'config';
-import { createPool } from 'mysql2/promise';
-import type { Pool, RowDataPacket } from 'mysql2/promise';
-import { getConnection } from './connection';
+import { getConnectionOptions } from 'config';
+import { createClient, RedisClientType } from 'redis';
 
-export let pool: Pool;
-export let dbVersion = '';
+export let client: RedisClientType;
+export let redisVersion = '';
 
-export async function createConnectionPool() {
+export async function createRedisClient() {
   const config = getConnectionOptions();
 
   try {
-    const dbPool = createPool(config);
-
-    dbPool.on('connection', (connection) => {
-      connection.query(mysql_transaction_isolation_level);
+    const redisClient = createClient({
+      username: config.username,
+      password: config.password,
+      socket: config.socket,
+      database: config.database,
     });
 
-    const [result] = (await dbPool.query('SELECT VERSION() as version')) as RowDataPacket[];
-    dbVersion = `^5[${result[0].version}]`;
+    redisClient.on('error', (err) => {
+      console.log(`^3Redis Client Error: ${err.message}^0`);
+    });
 
-    console.log(`${dbVersion} ^2Database server connection established!^0`);
+    redisClient.on('reconnecting', () => {
+      console.log('^3Redis client reconnecting...^0');
+    });
 
-    if (config.multipleStatements) {
-      console.warn(`multipleStatements is enabled. Used incorrectly, this option may cause SQL injection.`);
+    await redisClient.connect();
+
+    // Test connection with PING
+    const pong = await redisClient.ping();
+    if (pong !== 'PONG') {
+      throw new Error('Failed to receive PONG from Redis server');
     }
 
-    pool = dbPool;
-  } catch (err: any) {
-    const message = err.message.includes('auth_gssapi_client')
-      ? `Requested authentication using unknown plugin auth_gssapi_client.`
-      : err.message;
+    // Get Redis version info
+    const info = await redisClient.info('server');
+    const versionMatch = info.match(/redis_version:(\S+)/);
+    redisVersion = versionMatch ? `^5[Redis ${versionMatch[1]}]` : '^5[Redis]';
 
+    console.log(`${redisVersion} ^2Redis server connection established!^0`);
+
+    client = redisClient as RedisClientType;
+  } catch (err: any) {
     console.log(
-      `^3Unable to establish a connection to the database (${err.code})!\n^1Error${
-        err.errno ? ` ${err.errno}` : ''
-      }: ${message}^0`
+      `^3Unable to establish a connection to Redis!\n^1Error: ${err.message}^0`
     );
 
-    console.log(`See https://github.com/overextended/oxmysql/issues/154 for more information.`);
-
-    if (config.password) config.password = '******';
-
-    console.log(config);
+    // Log sanitized config (hide password)
+    const sanitizedConfig = { ...config };
+    if (sanitizedConfig.password) sanitizedConfig.password = '******';
+    console.log(sanitizedConfig);
   }
 }

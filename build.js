@@ -47,14 +47,11 @@ files {
 
 ui_page 'web/build/index.html'
 
-provide 'mysql-async'
-provide 'ghmattimysql'
-
-convar_category 'OxMySQL' {
+convar_category 'FiveMRedis' {
 	'Configuration',
 	{
-		{ 'Connection string', 'mysql_connection_string', 'CV_STRING', 'mysql://user:password@localhost/database' },
-		{ 'Debug', 'mysql_debug', 'CV_BOOL', 'false' }
+		{ 'Connection string', 'redis_connection_string', 'CV_STRING', 'redis://localhost:6379/0' },
+		{ 'Debug', 'redis_debug', 'CV_BOOL', 'false' }
 	}
 }
 `

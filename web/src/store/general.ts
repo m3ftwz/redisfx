@@ -23,12 +23,12 @@ export const filteredResources = derived(
 );
 
 export const generalData = writable({
-  queries: 0,
-  timeQuerying: 0,
-  slowQueries: 0,
+  commands: 0,
+  timeExecuting: 0,
+  slowCommands: 0,
 });
 
-export const chartData = writable<{ labels: string[]; data: { queries: number; time: number }[] }>({
+export const chartData = writable<{ labels: string[]; data: { commands: number; time: number }[] }>({
   labels: [],
   data: [],
 });

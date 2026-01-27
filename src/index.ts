@@ -1,139 +1,742 @@
-import type { CFXCallback, CFXParameters, TransactionQuery } from './types';
-import { rawQuery, rawExecute, rawTransaction, pool } from './database';
-import { startTransaction } from 'database/startTransaction';
+import type { CFXCallback, SetOptions, ZAddOptions } from './types';
+import { executeCommand, executeMulti, client } from './database';
 import { sleep } from 'utils/sleep';
-import ghmatti from './compatibility/ghmattimysql';
-import mysqlAsync from './compatibility/mysql-async';
+import { setCallback } from 'utils/setCallback';
 import('./update');
 
-const MySQL = {} as Record<string, Function>;
+const Redis = {} as Record<string, Function>;
 
-MySQL.isReady = () => {
-  return pool ? true : false;
+// Connection utilities
+Redis.isReady = () => {
+  return client ? true : false;
 };
 
-MySQL.awaitConnection = async () => {
-  while (!pool) await sleep(0);
-
+Redis.awaitConnection = async () => {
+  while (!client) await sleep(0);
   return true;
 };
 
-MySQL.query = (
-  query: string,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+// ============================================
+// String Commands
+// ============================================
+
+Redis.get = (
+  key: string,
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawQuery(null, invokingResource, query, parameters, cb, isPromise);
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'GET', [key], callback, isPromise);
 };
 
-MySQL.single = (
-  query: string,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+Redis.set = (
+  key: string,
+  value: string | number,
+  options?: SetOptions | CFXCallback,
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawQuery('single', invokingResource, query, parameters, cb, isPromise);
+  const callback = setCallback(options, cb);
+  const args: any[] = [key, value];
+
+  if (options && typeof options === 'object') {
+    if (options.EX) args.push('EX', options.EX);
+    if (options.PX) args.push('PX', options.PX);
+    if (options.EXAT) args.push('EXAT', options.EXAT);
+    if (options.PXAT) args.push('PXAT', options.PXAT);
+    if (options.NX) args.push('NX');
+    if (options.XX) args.push('XX');
+    if (options.KEEPTTL) args.push('KEEPTTL');
+    if (options.GET) args.push('GET');
+  }
+
+  return executeCommand(invokingResource, 'SET', args, callback, isPromise);
 };
 
-MySQL.scalar = (
-  query: string,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+Redis.del = (
+  keys: string | string[],
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawQuery('scalar', invokingResource, query, parameters, cb, isPromise);
+  const callback = setCallback(cb);
+  const keyArray = Array.isArray(keys) ? keys : [keys];
+  return executeCommand(invokingResource, 'DEL', keyArray, callback, isPromise);
 };
 
-MySQL.update = (
-  query: string,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+Redis.exists = (
+  keys: string | string[],
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawQuery('update', invokingResource, query, parameters, cb, isPromise);
+  const callback = setCallback(cb);
+  const keyArray = Array.isArray(keys) ? keys : [keys];
+  return executeCommand(invokingResource, 'EXISTS', keyArray, callback, isPromise);
 };
 
-MySQL.insert = (
-  query: string,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+Redis.expire = (
+  key: string,
+  seconds: number,
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawQuery('insert', invokingResource, query, parameters, cb, isPromise);
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'EXPIRE', [key, seconds], callback, isPromise);
 };
 
-MySQL.transaction = (
-  queries: TransactionQuery,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+Redis.ttl = (
+  key: string,
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawTransaction(invokingResource, queries, parameters, cb, isPromise);
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'TTL', [key], callback, isPromise);
 };
 
-MySQL.startTransaction = (
-  transactions: () => Promise<boolean>,
-  invokingResource = GetInvokingResource()
-) => {
-  console.warn(`MySQL.startTransaction is "experimental" and may receive breaking changes.`)
-  return startTransaction(invokingResource, transactions, undefined, true);
-};
-
-MySQL.prepare = (
-  query: string,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+Redis.incr = (
+  key: string,
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawExecute(invokingResource, query, parameters, cb, isPromise, true);
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'INCR', [key], callback, isPromise);
 };
 
-MySQL.rawExecute = (
-  query: string,
-  parameters: CFXParameters,
-  cb: CFXCallback,
+Redis.incrby = (
+  key: string,
+  increment: number,
+  cb?: CFXCallback,
   invokingResource = GetInvokingResource(),
   isPromise?: boolean
 ) => {
-  rawExecute(invokingResource, query, parameters, cb, isPromise);
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'INCRBY', [key, increment], callback, isPromise);
 };
 
-// provide the store export for compatibility (ghmatti/mysql-async); simply returns the query as-is
-MySQL.store = (query: string, cb: Function) => {
-  cb(query);
+Redis.decr = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'DECR', [key], callback, isPromise);
 };
 
-// deprecated export names
-MySQL.execute = MySQL.query;
-MySQL.fetch = MySQL.query;
+Redis.decrby = (
+  key: string,
+  decrement: number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'DECRBY', [key, decrement], callback, isPromise);
+};
 
-function provide(resourceName: string, method: string, cb: Function) {
-  on(`__cfx_export_${resourceName}_${method}`, (setCb: Function) => setCb(cb));
-}
+Redis.mget = (
+  keys: string[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'MGET', keys, callback, isPromise);
+};
 
-for (const key in MySQL) {
-  const exp = MySQL[key];
+Redis.mset = (
+  keyValues: Record<string, string | number>,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const args: any[] = [];
+  for (const [key, value] of Object.entries(keyValues)) {
+    args.push(key, value);
+  }
+  return executeCommand(invokingResource, 'MSET', args, callback, isPromise);
+};
 
-  const async_exp = (query: string, parameters: CFXParameters, invokingResource = GetInvokingResource()) => {
+// ============================================
+// Hash Commands
+// ============================================
+
+Redis.hget = (
+  key: string,
+  field: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HGET', [key, field], callback, isPromise);
+};
+
+Redis.hset = (
+  key: string,
+  field: string,
+  value: string | number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HSET', [key, field, value], callback, isPromise);
+};
+
+Redis.hmset = (
+  key: string,
+  fieldValues: Record<string, string | number>,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const args: any[] = [key];
+  for (const [field, value] of Object.entries(fieldValues)) {
+    args.push(field, value);
+  }
+  return executeCommand(invokingResource, 'HSET', args, callback, isPromise);
+};
+
+Redis.hgetall = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HGETALL', [key], callback, isPromise);
+};
+
+Redis.hdel = (
+  key: string,
+  fields: string | string[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const fieldArray = Array.isArray(fields) ? fields : [fields];
+  return executeCommand(invokingResource, 'HDEL', [key, ...fieldArray], callback, isPromise);
+};
+
+Redis.hincrby = (
+  key: string,
+  field: string,
+  increment: number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HINCRBY', [key, field, increment], callback, isPromise);
+};
+
+Redis.hexists = (
+  key: string,
+  field: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HEXISTS', [key, field], callback, isPromise);
+};
+
+Redis.hkeys = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HKEYS', [key], callback, isPromise);
+};
+
+Redis.hvals = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HVALS', [key], callback, isPromise);
+};
+
+Redis.hlen = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'HLEN', [key], callback, isPromise);
+};
+
+// ============================================
+// List Commands
+// ============================================
+
+Redis.lpush = (
+  key: string,
+  values: string | string[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const valueArray = Array.isArray(values) ? values : [values];
+  return executeCommand(invokingResource, 'LPUSH', [key, ...valueArray], callback, isPromise);
+};
+
+Redis.rpush = (
+  key: string,
+  values: string | string[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const valueArray = Array.isArray(values) ? values : [values];
+  return executeCommand(invokingResource, 'RPUSH', [key, ...valueArray], callback, isPromise);
+};
+
+Redis.lpop = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'LPOP', [key], callback, isPromise);
+};
+
+Redis.rpop = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'RPOP', [key], callback, isPromise);
+};
+
+Redis.lrange = (
+  key: string,
+  start: number,
+  stop: number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'LRANGE', [key, start, stop], callback, isPromise);
+};
+
+Redis.llen = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'LLEN', [key], callback, isPromise);
+};
+
+Redis.lindex = (
+  key: string,
+  index: number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'LINDEX', [key, index], callback, isPromise);
+};
+
+Redis.lset = (
+  key: string,
+  index: number,
+  value: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'LSET', [key, index, value], callback, isPromise);
+};
+
+Redis.lrem = (
+  key: string,
+  count: number,
+  value: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'LREM', [key, count, value], callback, isPromise);
+};
+
+// ============================================
+// Set Commands
+// ============================================
+
+Redis.sadd = (
+  key: string,
+  members: string | string[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const memberArray = Array.isArray(members) ? members : [members];
+  return executeCommand(invokingResource, 'SADD', [key, ...memberArray], callback, isPromise);
+};
+
+Redis.srem = (
+  key: string,
+  members: string | string[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const memberArray = Array.isArray(members) ? members : [members];
+  return executeCommand(invokingResource, 'SREM', [key, ...memberArray], callback, isPromise);
+};
+
+Redis.smembers = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'SMEMBERS', [key], callback, isPromise);
+};
+
+Redis.sismember = (
+  key: string,
+  member: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'SISMEMBER', [key, member], callback, isPromise);
+};
+
+Redis.scard = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'SCARD', [key], callback, isPromise);
+};
+
+Redis.spop = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'SPOP', [key], callback, isPromise);
+};
+
+Redis.srandmember = (
+  key: string,
+  count?: number | CFXCallback,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(count, cb);
+  const args = typeof count === 'number' ? [key, count] : [key];
+  return executeCommand(invokingResource, 'SRANDMEMBER', args, callback, isPromise);
+};
+
+// ============================================
+// Sorted Set Commands
+// ============================================
+
+Redis.zadd = (
+  key: string,
+  score: number,
+  member: string,
+  options?: ZAddOptions | CFXCallback,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(options, cb);
+  const args: any[] = [key];
+
+  if (options && typeof options === 'object') {
+    if (options.NX) args.push('NX');
+    if (options.XX) args.push('XX');
+    if (options.GT) args.push('GT');
+    if (options.LT) args.push('LT');
+    if (options.CH) args.push('CH');
+  }
+
+  args.push(score, member);
+  return executeCommand(invokingResource, 'ZADD', args, callback, isPromise);
+};
+
+Redis.zrange = (
+  key: string,
+  start: number,
+  stop: number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'ZRANGE', [key, start, stop], callback, isPromise);
+};
+
+Redis.zrangeWithScores = (
+  key: string,
+  start: number,
+  stop: number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'ZRANGE', [key, start, stop, 'WITHSCORES'], callback, isPromise);
+};
+
+Redis.zrem = (
+  key: string,
+  members: string | string[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  const memberArray = Array.isArray(members) ? members : [members];
+  return executeCommand(invokingResource, 'ZREM', [key, ...memberArray], callback, isPromise);
+};
+
+Redis.zscore = (
+  key: string,
+  member: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'ZSCORE', [key, member], callback, isPromise);
+};
+
+Redis.zrank = (
+  key: string,
+  member: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'ZRANK', [key, member], callback, isPromise);
+};
+
+Redis.zcard = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'ZCARD', [key], callback, isPromise);
+};
+
+Redis.zincrby = (
+  key: string,
+  increment: number,
+  member: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'ZINCRBY', [key, increment, member], callback, isPromise);
+};
+
+// ============================================
+// Transaction Commands
+// ============================================
+
+Redis.multi = (
+  commands: { command: string; args: any[] }[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeMulti(invokingResource, commands, callback, isPromise);
+};
+
+// ============================================
+// Key Commands
+// ============================================
+
+Redis.keys = (
+  pattern: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'KEYS', [pattern], callback, isPromise);
+};
+
+Redis.scan = (
+  cursor: number,
+  options?: { MATCH?: string; COUNT?: number } | CFXCallback,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(options, cb);
+  const args: any[] = [cursor];
+
+  if (options && typeof options === 'object') {
+    if (options.MATCH) args.push('MATCH', options.MATCH);
+    if (options.COUNT) args.push('COUNT', options.COUNT);
+  }
+
+  return executeCommand(invokingResource, 'SCAN', args, callback, isPromise);
+};
+
+Redis.type = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'TYPE', [key], callback, isPromise);
+};
+
+Redis.rename = (
+  key: string,
+  newKey: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'RENAME', [key, newKey], callback, isPromise);
+};
+
+Redis.persist = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'PERSIST', [key], callback, isPromise);
+};
+
+Redis.pttl = (
+  key: string,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'PTTL', [key], callback, isPromise);
+};
+
+Redis.expireat = (
+  key: string,
+  timestamp: number,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'EXPIREAT', [key, timestamp], callback, isPromise);
+};
+
+// ============================================
+// Server Commands
+// ============================================
+
+Redis.ping = (
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'PING', [], callback, isPromise);
+};
+
+Redis.flushdb = (
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'FLUSHDB', [], callback, isPromise);
+};
+
+Redis.dbsize = (
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, 'DBSIZE', [], callback, isPromise);
+};
+
+// ============================================
+// Raw Command Execution
+// ============================================
+
+Redis.raw = (
+  command: string,
+  args: any[],
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean
+) => {
+  const callback = setCallback(cb);
+  return executeCommand(invokingResource, command, args, callback, isPromise);
+};
+
+// ============================================
+// Export all methods as CFX exports
+// ============================================
+
+for (const key in Redis) {
+  const exp = Redis[key];
+
+  // Async wrapper for promise-based calls
+  const async_exp = (...args: any[]) => {
+    const invokingResource = GetInvokingResource();
     return new Promise((resolve, reject) => {
-      MySQL[key](
-        query,
-        parameters,
-        (result: unknown, err: string) => {
-          if (err) return reject(new Error(err));
-          resolve(result);
-        },
-        invokingResource,
-        true
-      );
+      // Add callback and invokingResource to args
+      const fullArgs = [...args, (result: unknown, err: string) => {
+        if (err) return reject(new Error(err));
+        resolve(result);
+      }, invokingResource, true];
+
+      Redis[key](...fullArgs);
     });
   };
 
@@ -142,17 +745,4 @@ for (const key in MySQL) {
   global.exports(`${key}_async`, async_exp);
   // deprecated aliases for async_retval
   global.exports(`${key}Sync`, async_exp);
-
-  let alias = (ghmatti as any)[key];
-
-  if (alias) {
-    provide('ghmattimysql', alias, exp);
-    provide('ghmattimysql', `${alias}Sync`, async_exp);
-  }
-
-  alias = (mysqlAsync as any)[key];
-
-  if (alias) {
-    provide('mysql-async', alias, exp);
-  }
 }

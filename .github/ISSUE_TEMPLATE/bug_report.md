@@ -13,7 +13,7 @@ assignees: ''
 - [ ] I am using the latest release
 - [ ] I have referenced previously reported issues
 - [ ] I have referenced available documentation and cannot resolve the issue
-- [ ] I'm certain this is an issue with oxymysql, and not with my resource
+- [ ] I'm certain this is an issue with fivemredis, and not with my resource
 
 **Describe the bug**
 A clear and concise description of what the bug is.
@@ -23,7 +23,7 @@ If applicable, add screenshots to help explain your problem.
 
 **Code**
 ```lua
-    -- If applicable, include the query and relevant code
+    -- If applicable, include the command and relevant code
 ```
 
 **Expected behavior**
@@ -36,6 +36,5 @@ Add any other context about the problem here.
 - FXServer artifact
 - Operating system
 
-**Database details**
-- MariaDB or MySQL
-- Version
+**Redis details**
+- Redis version

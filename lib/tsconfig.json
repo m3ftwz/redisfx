@@ -19,6 +19,6 @@
     "noImplicitAny": false,
     "noEmit": false
   },
-  "include": ["MySQL.ts"],
+  "include": ["Redis.ts"],
   "exclude": ["**/node_modules"]
 }

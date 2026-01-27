@@ -16,8 +16,8 @@
   </button>
   <p class="text-center text-lg">{route.params.resource}</p>
   <div class="text-end text-dark-100 flex flex-col text-xs">
-    <p>Queries: {$resourceData.resourceQueriesCount}</p>
+    <p>Commands: {$resourceData.resourceCommandsCount}</p>
     <p>Time: {$resourceData.resourceTime.toFixed(4)} ms</p>
-    <p class="text-yellow-500">Slow queries: {$resourceData.resourceSlowQueries}</p>
+    <p class="text-yellow-500">Slow commands: {$resourceData.resourceSlowCommands}</p>
   </div>
 </div>

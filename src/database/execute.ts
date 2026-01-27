@@ -1,0 +1,94 @@
+import { client } from './pool';
+import { logCommand, logError } from '../logger';
+import { sleep } from '../utils/sleep';
+import { scheduleTick } from '../utils/scheduleTick';
+import type { CFXCallback } from '../types';
+
+export async function executeCommand(
+  invokingResource: string,
+  command: string,
+  args: any[],
+  cb?: CFXCallback,
+  isPromise?: boolean
+) {
+  while (!client) await sleep(0);
+
+  scheduleTick();
+
+  const startTime = performance.now();
+
+  try {
+    const cmd = command.toLowerCase();
+    const redisClient = client as any;
+    let result: any;
+
+    if (typeof redisClient[cmd] === 'function') {
+      result = await redisClient[cmd](...args);
+    } else {
+      // Fallback to sendCommand for any command
+      result = await client.sendCommand([command.toUpperCase(), ...args.map(String)]);
+    }
+
+    const executionTime = performance.now() - startTime;
+    logCommand(invokingResource, command, args, executionTime);
+
+    if (cb) {
+      cb(result);
+    }
+
+    return result;
+  } catch (err: any) {
+    logError(invokingResource, cb, isPromise, err, command, args);
+
+    if (cb && isPromise) {
+      return;
+    }
+
+    throw err;
+  }
+}
+
+export async function executeMulti(
+  invokingResource: string,
+  commands: { command: string; args: any[] }[],
+  cb?: CFXCallback,
+  isPromise?: boolean
+) {
+  while (!client) await sleep(0);
+
+  scheduleTick();
+
+  const startTime = performance.now();
+
+  try {
+    const multi = client.multi();
+
+    for (const { command, args } of commands) {
+      const cmd = command.toLowerCase();
+      if (typeof (multi as any)[cmd] === 'function') {
+        (multi as any)[cmd](...args);
+      } else {
+        multi.addCommand([command.toUpperCase(), ...args.map(String)]);
+      }
+    }
+
+    const results = await multi.exec();
+    const executionTime = performance.now() - startTime;
+
+    logCommand(invokingResource, 'MULTI/EXEC', commands, executionTime);
+
+    if (cb) {
+      cb(results);
+    }
+
+    return results;
+  } catch (err: any) {
+    logError(invokingResource, cb, isPromise, err, 'MULTI/EXEC', commands);
+
+    if (cb && isPromise) {
+      return;
+    }
+
+    throw err;
+  }
+}

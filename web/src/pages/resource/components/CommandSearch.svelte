@@ -17,5 +17,5 @@
   <div class="pr-2">
     <svelte:component this={icon} class="text-dark-300" />
   </div>
-  <input type="text" bind:value class="w-full bg-transparent outline-none" placeholder="Search queries..." />
+  <input type="text" bind:value class="w-full bg-transparent outline-none" placeholder="Search commands..." />
 </div>

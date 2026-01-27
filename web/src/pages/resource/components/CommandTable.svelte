@@ -1,7 +1,7 @@
 <script lang="ts">
   import IconChevronDown from '@tabler/icons-svelte/dist/svelte/icons/IconChevronDown.svelte';
   import IconChevronUp from '@tabler/icons-svelte/dist/svelte/icons/IconChevronUp.svelte';
-  import { queries, type QueryData } from '../../../store';
+  import { commands, type CommandData } from '../../../store';
   import {
     createSvelteTable,
     getCoreRowModel,
@@ -14,14 +14,14 @@
   import { meta } from 'tinro';
   import { fetchNui } from '../../../utils/fetchNui';
   import { filterData } from '../../../store';
-  import QueryTooltip from './QueryTooltip.svelte';
+  import CommandTooltip from './CommandTooltip.svelte';
 
   const route = meta();
 
-  const columns: ColumnDef<QueryData, number>[] = [
+  const columns: ColumnDef<CommandData, any>[] = [
     {
-      accessorKey: 'query',
-      header: 'Query',
+      accessorKey: 'command',
+      header: 'Command',
       cell: (info) => info.getValue(),
       enableSorting: true,
     },
@@ -50,8 +50,8 @@
     }));
   };
 
-  const options = writable<TableOptions<QueryData>>({
-    data: $queries,
+  const options = writable<TableOptions<CommandData>>({
+    data: $commands,
     columns,
     manualPagination: true,
     manualSorting: true,
@@ -63,7 +63,7 @@
     },
   });
 
-  $: options.update((prev) => ({ ...prev, data: $queries }));
+  $: options.update((prev) => ({ ...prev, data: $commands }));
 
   const table = createSvelteTable(options);
 
@@ -112,12 +112,12 @@
       {#each $table.getRowModel().rows as row}
         <tr>
           {#each row.getVisibleCells() as cell}
-            <QueryTooltip
+            <CommandTooltip
               content={cell.getValue()}
               let:floatingRef
               let:displayTooltip
               let:hideTooltip
-              disabled={cell.column.id !== 'query'}
+              disabled={cell.column.id !== 'command'}
             >
               <td
                 use:floatingRef
@@ -129,7 +129,7 @@
               >
                 <svelte:component this={flexRender(cell.column.columnDef.cell, cell.getContext())} />
               </td>
-            </QueryTooltip>
+            </CommandTooltip>
           {/each}
         </tr>
       {/each}

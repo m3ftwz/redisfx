@@ -1,18 +1,18 @@
-# OxMySQL exports wrapper for FiveM
+# FiveMRedis exports wrapper for FiveM
 
-Types are fully supported and you will get intellisense on the `oxmysql` object when using it.
+Types are fully supported and you will get intellisense on the `fivemredis` object when using it.
 
 ## Installation
 
 ```yaml
 # With pnpm
-pnpm add @communityox/oxmysql
+pnpm add @m3ftwz/fivemredis
 
 # With Yarn
-yarn add @communityox/oxmysql
+yarn add @m3ftwz/fivemredis
 
 # With npm
-npm install @communityox/oxmysql
+npm install @m3ftwz/fivemredis
 ```
 
 ## Usage
@@ -20,30 +20,38 @@ npm install @communityox/oxmysql
 Import as module:
 
 ```js
-import { oxmysql } from '@communityox/oxmysql';
+import { fivemredis } from '@m3ftwz/fivemredis';
 ```
 
 Import with require:
 
 ```js
-const { oxmysql } = require('@communityox/oxmysql');
+const { fivemredis } = require('@m3ftwz/fivemredis');
 ```
 
-## Documentation
-
-[View documentation](https://coxdocs.dev/oxmysql)
+## Examples
 
 ```js
-oxmysql.scalar('SELECT username FROM users', (result) => {
+// Callback style
+fivemredis.get('player:1:name', (result) => {
+    console.log(result)
+})
+
+// Promise style
+fivemredis.get('player:1:name').then((result) => {
     console.log(result)
 }).catch(console.error)
 
-oxmysql.scalar('SELECT username FROM users').then((result) => {
-    console.log(result)
-}).catch(console.error)
-
-const result = await oxmysql.scalar('SELECT username FROM users').catch(console.error)
+// Async/await
+const result = await fivemredis.get('player:1:name').catch(console.error)
 console.log(result)
+
+// Hash operations
+await fivemredis.hset('player:1', 'money', 1000)
+const money = await fivemredis.hget('player:1', 'money')
+
+// Set with expiry
+await fivemredis.set('session:abc', 'data', { EX: 3600 })
 ```
 
 ## License
