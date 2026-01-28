@@ -1,18 +1,18 @@
 This project was forked from CommunityOx's oxmysql and adapted to use Redis instead of MySQL.
 
-# fivemredis
+# redisfx
 
 A FiveM resource providing Redis connectivity for game server scripts using [node-redis](https://github.com/redis/node-redis). It serves as a bridge between your FiveM resources and a Redis database, offering both synchronous and asynchronous APIs.
 
-![](https://img.shields.io/github/downloads/m3ftwz/fivemredis/total?logo=github)
-![](https://img.shields.io/github/downloads/m3ftwz/fivemredis/latest/total?logo=github)
-![](https://img.shields.io/github/contributors/m3ftwz/fivemredis?logo=github)
-![](https://img.shields.io/github/v/release/m3ftwz/fivemredis?logo=github)
+![](https://img.shields.io/github/downloads/m3ftwz/redisfx/total?logo=github)
+![](https://img.shields.io/github/downloads/m3ftwz/redisfx/latest/total?logo=github)
+![](https://img.shields.io/github/contributors/m3ftwz/redisfx?logo=github)
+![](https://img.shields.io/github/v/release/m3ftwz/redisfx?logo=github)
 
 ## Links
 
-- [Download](https://github.com/m3ftwz/fivemredis/releases/latest/download/fivemredis.zip)
-- [npm Package](https://www.npmjs.com/package/@m3ftwz/fivemredis)
+- [Download](https://github.com/m3ftwz/redisfx/releases/latest/download/redisfx.zip)
+- [npm Package](https://www.npmjs.com/package/@m3ftwz/redisfx)
 
 ## Features
 
@@ -25,9 +25,9 @@ A FiveM resource providing Redis connectivity for game server scripts using [nod
 
 ## Installation
 
-1. Download the [latest release](https://github.com/m3ftwz/fivemredis/releases/latest/download/fivemredis.zip)
+1. Download the [latest release](https://github.com/m3ftwz/redisfx/releases/latest/download/redisfx.zip)
 2. Extract to your `resources` folder
-3. Add `start fivemredis` to your `server.cfg`
+3. Add `start redisfx` to your `server.cfg`
 4. Configure your connection string (see below)
 
 ## Configuration
@@ -68,14 +68,14 @@ host=localhost;port=6379;password=secret;database=0
 
 > **Note:** All commands automatically wait for Redis to connect before executing. You don't need to explicitly wait for the connection - just call commands directly and they will queue until ready.
 >
-> If you need to run initialization logic only after Redis is connected, you can use `Redis.ready.await()` (Lua) or `await fivemredis.awaitConnection()` (JS/TS).
+> If you need to run initialization logic only after Redis is connected, you can use `Redis.ready.await()` (Lua) or `await redisfx.awaitConnection()` (JS/TS).
 
 ### Lua
 
 Add the following to your `fxmanifest.lua` to enable type-checking and intellisense:
 
 ```lua
-server_script '@fivemredis/lib/Redis.lua'
+server_script '@redisfx/lib/Redis.lua'
 ```
 
 Then use in your scripts:
@@ -106,7 +106,7 @@ local top10 = Redis.zrange.await('leaderboard', 0, 9)
 **Using exports directly:**
 
 ```lua
-local Redis = exports['fivemredis']
+local Redis = exports['redisfx']
 
 local name = Redis:get('player:1:name')
 Redis:set('player:1:name', 'John')
@@ -133,26 +133,26 @@ Redis.Sync.get('key')
 Install the npm package for intellisense and type support:
 
 ```bash
-npm install @m3ftwz/fivemredis
+npm install @m3ftwz/redisfx
 # or
-pnpm add @m3ftwz/fivemredis
+pnpm add @m3ftwz/redisfx
 ```
 
 Usage:
 
 ```typescript
-import { fivemredis } from '@m3ftwz/fivemredis';
+import { redisfx } from '@m3ftwz/redisfx';
 
 // String commands
-const name = await fivemredis.get('player:1:name');
-await fivemredis.set('player:1:name', 'John', { EX: 3600 });
+const name = await redisfx.get('player:1:name');
+await redisfx.set('player:1:name', 'John', { EX: 3600 });
 
 // Hash commands
-await fivemredis.hset('player:1', 'money', 1000);
-const money = await fivemredis.hget('player:1', 'money');
+await redisfx.hset('player:1', 'money', 1000);
+const money = await redisfx.hget('player:1', 'money');
 
 // All commands support both promises and callbacks
-fivemredis.get('key', (result) => {
+redisfx.get('key', (result) => {
     console.log(result);
 });
 ```

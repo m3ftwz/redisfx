@@ -1,18 +1,18 @@
-# FiveMRedis exports wrapper for FiveM
+# RedisFX exports wrapper for FiveM
 
-Types are fully supported and you will get intellisense on the `fivemredis` object when using it.
+Types are fully supported and you will get intellisense on the `redisfx` object when using it.
 
 ## Installation
 
 ```yaml
 # With pnpm
-pnpm add @m3ftwz/fivemredis
+pnpm add @m3ftwz/redisfx
 
 # With Yarn
-yarn add @m3ftwz/fivemredis
+yarn add @m3ftwz/redisfx
 
 # With npm
-npm install @m3ftwz/fivemredis
+npm install @m3ftwz/redisfx
 ```
 
 ## Usage
@@ -20,38 +20,38 @@ npm install @m3ftwz/fivemredis
 Import as module:
 
 ```js
-import { fivemredis } from '@m3ftwz/fivemredis';
+import { redisfx } from '@m3ftwz/redisfx';
 ```
 
 Import with require:
 
 ```js
-const { fivemredis } = require('@m3ftwz/fivemredis');
+const { redisfx } = require('@m3ftwz/redisfx');
 ```
 
 ## Examples
 
 ```js
 // Callback style
-fivemredis.get('player:1:name', (result) => {
+redisfx.get('player:1:name', (result) => {
     console.log(result)
 })
 
 // Promise style
-fivemredis.get('player:1:name').then((result) => {
+redisfx.get('player:1:name').then((result) => {
     console.log(result)
 }).catch(console.error)
 
 // Async/await
-const result = await fivemredis.get('player:1:name').catch(console.error)
+const result = await redisfx.get('player:1:name').catch(console.error)
 console.log(result)
 
 // Hash operations
-await fivemredis.hset('player:1', 'money', 1000)
-const money = await fivemredis.hget('player:1', 'money')
+await redisfx.hset('player:1', 'money', 1000)
+const money = await redisfx.hget('player:1', 'money')
 
 // Set with expiry
-await fivemredis.set('session:abc', 'data', { EX: 3600 })
+await redisfx.set('session:abc', 'data', { EX: 3600 })
 ```
 
 ## License

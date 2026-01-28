@@ -30,21 +30,21 @@ local function await(fn, ...)
 end
 
 local type = type
-local fivemredis = exports['fivemredis']
+local redisfx = exports['redisfx']
 
 local redis_method_mt = {
 	__call = function(self, ...)
 		local args = {...}
 		table.insert(args, resourceName)
 		table.insert(args, options.return_callback_errors)
-		return fivemredis[self.method](nil, table.unpack(args))
+		return redisfx[self.method](nil, table.unpack(args))
 	end
 }
 
 local Redis = setmetatable(Redis or {}, {
 	__index = function(_, index)
 		return function(...)
-			return fivemredis[index](nil, ...)
+			return redisfx[index](nil, ...)
 		end
 	end
 })
@@ -56,7 +56,7 @@ for _, method in pairs({
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
-			return await(fivemredis[method], ...)
+			return await(redisfx[method], ...)
 		end
 	}, redis_method_mt)
 end
@@ -68,7 +68,7 @@ for _, method in pairs({
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
-			return await(fivemredis[method], ...)
+			return await(redisfx[method], ...)
 		end
 	}, redis_method_mt)
 end
@@ -80,7 +80,7 @@ for _, method in pairs({
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
-			return await(fivemredis[method], ...)
+			return await(redisfx[method], ...)
 		end
 	}, redis_method_mt)
 end
@@ -92,7 +92,7 @@ for _, method in pairs({
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
-			return await(fivemredis[method], ...)
+			return await(redisfx[method], ...)
 		end
 	}, redis_method_mt)
 end
@@ -104,7 +104,7 @@ for _, method in pairs({
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
-			return await(fivemredis[method], ...)
+			return await(redisfx[method], ...)
 		end
 	}, redis_method_mt)
 end
@@ -116,7 +116,7 @@ for _, method in pairs({
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
-			return await(fivemredis[method], ...)
+			return await(redisfx[method], ...)
 		end
 	}, redis_method_mt)
 end
@@ -128,7 +128,7 @@ for _, method in pairs({
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
-			return await(fivemredis[method], ...)
+			return await(redisfx[method], ...)
 		end
 	}, redis_method_mt)
 end
@@ -149,11 +149,11 @@ Redis.Sync = setmetatable({}, alias_mt)
 Redis.Async = setmetatable({}, alias_mt)
 
 local function onReady(cb)
-	while GetResourceState('fivemredis') ~= 'started' do
+	while GetResourceState('redisfx') ~= 'started' do
 		Wait(50)
 	end
 
-	fivemredis.awaitConnection()
+	redisfx.awaitConnection()
 
 	return cb and cb() or true
 end

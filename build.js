@@ -47,7 +47,7 @@ files {
 
 ui_page 'web/build/index.html'
 
-convar_category 'FiveMRedis' {
+convar_category 'RedisFX' {
 	'Configuration',
 	{
 		{ 'Connection string', 'redis_connection_string', 'CV_STRING', 'redis://localhost:6379/0' },

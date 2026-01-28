@@ -7,7 +7,7 @@ const endpoint = 'https://api.fivemanage.com/api/logs/batch';
 const headers = {
   ['Content-Type']: 'application/json',
   ['Authorization']: apiKey,
-  ['User-Agent']: 'fivemredis',
+  ['User-Agent']: 'redisfx',
 };
 
 async function sendLogs() {

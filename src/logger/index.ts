@@ -37,7 +37,7 @@ export function logError(
     includeArgs ? `\n${JSON.stringify(args)}` : ''
   }\n${message}`;
 
-  TriggerEvent('fivemredis:error', {
+  TriggerEvent('redisfx:error', {
     command: command,
     args: args,
     message: message,
@@ -123,7 +123,7 @@ RegisterCommand(
       chartData.data.push({ commands: commands.length, time: totalResourceTime });
     }
 
-    emitNet(`fivemredis:openUi`, source, {
+    emitNet(`redisfx:openUi`, source, {
       resources: Object.keys(logStorage),
       totalCommands,
       slowCommands,
@@ -150,7 +150,7 @@ const sortCommands = (commands: CommandData[], sort: { id: 'command' | 'executio
 };
 
 onNet(
-  `fivemredis:fetchResource`,
+  `redisfx:fetchResource`,
   (data: {
     resource: string;
     pageIndex: number;
@@ -184,7 +184,7 @@ onNet(
       if (cmd.slow) resourceSlowCommands += 1;
     }
 
-    emitNet(`fivemredis:loadResource`, source, {
+    emitNet(`redisfx:loadResource`, source, {
       commands,
       pageCount,
       resourceCommandsCount,

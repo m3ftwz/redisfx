@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "fivemredis",
+      "name": "redisfx",
       "dependencies": {
         "node-fetch": "^3.3.2",
         "redis": "^5.10.0",

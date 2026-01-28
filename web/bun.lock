@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "fivemredis",
+      "name": "redisfx",
       "dependencies": {
         "@tabler/icons-svelte": "^2.47.0",
         "@tanstack/svelte-table": "8.8.0",

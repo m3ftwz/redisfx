@@ -1,7 +1,7 @@
 {
-  "name": "@m3ftwz/fivemredis",
+  "name": "@m3ftwz/redisfx",
   "version": "1.0.0",
-  "description": "Exports wrapper for fivemredis",
+  "description": "Exports wrapper for redisfx",
   "types": "Redis.d.ts",
   "main": "Redis.js",
   "scripts": {
@@ -9,17 +9,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/m3ftwz/fivemredis.git"
+    "url": "git+https://github.com/m3ftwz/redisfx.git"
   },
   "keywords": [
     "fivem",
-    "fivemredis",
+    "redisfx",
     "redis"
   ],
   "author": "m3ftwz",
   "license": "LGPL-3.0",
   "bugs": {
-    "url": "https://github.com/m3ftwz/fivemredis/issues"
+    "url": "https://github.com/m3ftwz/redisfx/issues"
   },
-  "homepage": "https://github.com/m3ftwz/fivemredis#readme"
+  "homepage": "https://github.com/m3ftwz/redisfx#readme"
 }

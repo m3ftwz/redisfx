@@ -1,4 +1,4 @@
-RegisterNetEvent('fivemredis:openUi', function(data)
+RegisterNetEvent('redisfx:openUi', function(data)
     SendNUIMessage({
         action = 'openUI',
         data = data
@@ -12,11 +12,11 @@ RegisterNUICallback('exit', function(_, cb)
 end)
 
 RegisterNUICallback('fetchResource', function(data, cb)
-    TriggerServerEvent('fivemredis:fetchResource', data)
+    TriggerServerEvent('redisfx:fetchResource', data)
     cb(true)
 end)
 
-RegisterNetEvent('fivemredis:loadResource', function(data)
+RegisterNetEvent('redisfx:loadResource', function(data)
     SendNUIMessage({
         action = 'loadResource',
         data = data

@@ -1,12 +1,12 @@
 {
-  "name": "fivemredis",
+  "name": "redisfx",
   "version": "1.0.0-rc.1",
   "description": "FXServer to Redis communication via node-redis",
   "repository": {
     "type": "git",
-    "url": "https://github.com/m3ftwz/fivemredis.git"
+    "url": "https://github.com/m3ftwz/redisfx.git"
   },
-  "bugs": "https://github.com/m3ftwz/fivemredis/issues",
+  "bugs": "https://github.com/m3ftwz/redisfx/issues",
   "author": "m3ftwz",
   "license": "LGPL-3.0",
   "type": "module",

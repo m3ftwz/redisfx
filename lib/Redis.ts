@@ -24,7 +24,7 @@ interface ScanOptions {
   COUNT?: number;
 }
 
-interface FiveMRedis {
+interface RedisFX {
   // Connection
   isReady: () => boolean;
   awaitConnection: () => Promise<true>;
@@ -126,7 +126,7 @@ const safeArgs = (arg1: any, arg2?: any, cb?: Function) => {
 };
 
 declare var global: any;
-const exp = global.exports['fivemredis'];
+const exp = global.exports['redisfx'];
 const currentResourceName = GetCurrentResourceName();
 
 function execute(method: string, ...args: any[]) {
@@ -143,7 +143,7 @@ function execute(method: string, ...args: any[]) {
   }) as any;
 }
 
-export const fivemredis: FiveMRedis = {
+export const redisfx: RedisFX = {
   isReady() {
     return exp.isReady();
   },
@@ -152,7 +152,7 @@ export const fivemredis: FiveMRedis = {
   },
   ready(callback) {
     setImmediate(async () => {
-      while (GetResourceState('fivemredis') !== 'started') await new Promise((resolve) => setTimeout(resolve, 50, null));
+      while (GetResourceState('redisfx') !== 'started') await new Promise((resolve) => setTimeout(resolve, 50, null));
       callback();
     });
   },

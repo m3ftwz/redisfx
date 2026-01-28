@@ -56,12 +56,12 @@ jobs:
 
       - name: Bundle files
         run: |
-          mkdir -p ./temp/fivemredis/{web,lib}
-          cp ./{LICENSE,README.md,fxmanifest.lua,ui.lua} ./temp/fivemredis
-          cp ./lib/Redis.lua ./temp/fivemredis/lib
-          cp -r ./dist ./logger ./temp/fivemredis
-          cp -r ./web/build ./temp/fivemredis/web/
-          cd ./temp && zip -r ../fivemredis.zip ./fivemredis
+          mkdir -p ./temp/redisfx/{web,lib}
+          cp ./{LICENSE,README.md,fxmanifest.lua,ui.lua} ./temp/redisfx
+          cp ./lib/Redis.lua ./temp/redisfx/lib
+          cp -r ./dist ./logger ./temp/redisfx
+          cp -r ./web/build ./temp/redisfx/web/
+          cd ./temp && zip -r ../redisfx.zip ./redisfx
 
       - name: Create release
         uses: 'marvinpinto/action-automatic-releases@v1.2.1'
@@ -69,4 +69,4 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           prerelease: true
           automatic_release_tag: ${{ github.event.inputs.tag }}
-          files: fivemredis.zip
+          files: redisfx.zip

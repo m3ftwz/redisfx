@@ -69,7 +69,7 @@ export function getConnectionOptions() {
 }
 
 RegisterCommand(
-  'fivemredis_debug',
+  'redisfx_debug',
   (source: number, args: string[]) => {
     if (source !== 0) return console.log('^3This command can only be run server side^0');
     switch (args[0]) {
@@ -90,7 +90,7 @@ RegisterCommand(
         }
 
       default:
-        return console.log(`^3Usage: fivemredis add|remove <resource>^0`);
+        return console.log(`^3Usage: redisfx add|remove <resource>^0`);
     }
   },
   true

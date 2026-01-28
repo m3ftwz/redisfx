@@ -9,8 +9,8 @@ import fetch from 'node-fetch';
   if (!currentVersion) return;
 
   setTimeout(async () => {
-    const response = await fetch(`https://api.github.com/repos/m3ftwz/fivemredis/releases/latest`).catch((err) => {
-      console.warn(`Failed to retrieve latest version of fivemredis (${err.code}).`);
+    const response = await fetch(`https://api.github.com/repos/m3ftwz/redisfx/releases/latest`).catch((err) => {
+      console.warn(`Failed to retrieve latest version of redisfx (${err.code}).`);
     });
 
     if (response?.status !== 200) return;

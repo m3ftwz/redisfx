@@ -41,12 +41,12 @@
     {
       action: 'openUI',
       data: {
-        resources: ['ox_core', 'fivemredis', 'ox_inventory', 'ox_doorlock', 'ox_lib', 'ox_vehicleshop', 'ox_target'],
+        resources: ['ox_core', 'redisfx', 'ox_inventory', 'ox_doorlock', 'ox_lib', 'ox_vehicleshop', 'ox_target'],
         slowCommands: 13,
         totalCommands: 332,
         totalTime: 230123,
         chartData: {
-          labels: ['fivemredis', 'ox_core', 'ox_inventory', 'ox_doorlock'],
+          labels: ['redisfx', 'ox_core', 'ox_inventory', 'ox_doorlock'],
           data: [
             { commands: 25, time: 133 },
             { commands: 5, time: 12 },
