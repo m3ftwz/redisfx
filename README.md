@@ -72,7 +72,7 @@ host=localhost;port=6379;password=secret;database=0
 
 ### Lua
 
-Add the following to your `fxmanifest.lua` to enable type-checking and intellisense:
+Add the following to your `fxmanifest.lua`:
 
 ```lua
 server_script '@redisfx/lib/Redis.lua'
