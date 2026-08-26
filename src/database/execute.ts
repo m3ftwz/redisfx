@@ -2,31 +2,31 @@ import { client } from './pool';
 import { logCommand, logError } from '../logger';
 import { sleep } from '../utils/sleep';
 import { scheduleTick } from '../utils/scheduleTick';
+import { resolveCommand, serializeArgs } from '../utils/commands';
 import type { CFXCallback } from '../types';
 
-// Special command mappings for node-redis (most use UPPERCASE directly)
-const COMMAND_MAP: Record<string, string> = {
-  'ZRANGEWITHSCORES': 'zRangeWithScores',
-  'SRANDMEMBERCOUNT': 'sRandMemberCount',
-};
+/**
+ * Dispatches a single command. Prefers node-redis' typed method for the command (which knows how
+ * to encode structured options) and falls back to the raw protocol for anything it does not model.
+ */
+async function dispatch(command: string, args: unknown[], raw?: boolean) {
+  if (raw) return client.sendCommand(serializeArgs([command, ...args]));
 
-// Serialize argument for sendCommand (raw Redis protocol)
-function serializeArg(arg: any): string {
-  if (arg === null || arg === undefined) {
-    return '';
-  }
-  if (typeof arg === 'object') {
-    return JSON.stringify(arg);
-  }
-  return String(arg);
+  const method = resolveCommand(command);
+  const redisClient = client as unknown as Record<string, Function>;
+
+  if (typeof redisClient[method] === 'function') return redisClient[method](...args);
+
+  return client.sendCommand(serializeArgs([command, ...args]));
 }
 
 export async function executeCommand(
   invokingResource: string,
   command: string,
-  args: any[],
+  args: unknown[],
   cb?: CFXCallback,
-  isPromise?: boolean
+  isPromise?: boolean,
+  raw?: boolean,
 ) {
   while (!client) await sleep(0);
 
@@ -35,39 +35,17 @@ export async function executeCommand(
   const startTime = performance.now();
 
   try {
-    let result: any;
+    const result = await dispatch(command, args, raw);
 
-    if (command.startsWith('_RAW:')) {
-      const rawCmd = command.slice(5);
-      result = await client.sendCommand([rawCmd.toUpperCase(), ...args.map(serializeArg)]);
-    } else {
-      const methodName = COMMAND_MAP[command] || command;
-      const redisClient = client as any;
+    logCommand(invokingResource, command, args, performance.now() - startTime);
 
-      if (typeof redisClient[methodName] === 'function') {
-        result = await redisClient[methodName](...args);
-      } else {
-        // Fallback to sendCommand for any command
-        result = await client.sendCommand([command, ...args.map(serializeArg)]);
-      }
-    }
-
-    const executionTime = performance.now() - startTime;
-    const logCmd = command.startsWith('_RAW:') ? command.slice(5) : command;
-    logCommand(invokingResource, logCmd, args, executionTime);
-
-    if (cb) {
-      cb(result);
-    }
+    if (cb) cb(result);
 
     return result;
   } catch (err: any) {
-    const logCmd = command.startsWith('_RAW:') ? command.slice(5) : command;
-    logError(invokingResource, cb, isPromise, err, logCmd, args);
+    logError(invokingResource, cb, isPromise, err, command, args);
 
-    if (cb && isPromise) {
-      return;
-    }
+    if (cb && isPromise) return;
 
     throw err;
   }
@@ -75,9 +53,9 @@ export async function executeCommand(
 
 export async function executeMulti(
   invokingResource: string,
-  commands: { command: string; args: any[] }[],
+  commands: { command: string; args?: unknown[] }[],
   cb?: CFXCallback,
-  isPromise?: boolean
+  isPromise?: boolean,
 ) {
   while (!client) await sleep(0);
 
@@ -86,41 +64,36 @@ export async function executeMulti(
   const startTime = performance.now();
 
   try {
+    if (!Array.isArray(commands)) {
+      throw new Error('Expected an array of commands, e.g. [{ command: "SET", args: ["key", "value"] }].');
+    }
+
     const multi = client.multi();
 
     for (const cmd of commands) {
       if (!cmd || typeof cmd.command !== 'string') {
-        throw new Error('Invalid command format: each command must have a "command" string property');
+        throw new Error('Invalid command format: each command must have a "command" string property.');
       }
 
-      const methodName = COMMAND_MAP[cmd.command] || cmd.command;
-      const cmdArgs = cmd.args || [];
+      const cmdArgs = cmd.args === undefined ? [] : Array.isArray(cmd.args) ? cmd.args : [cmd.args];
+      const method = resolveCommand(cmd.command);
+      const queue = multi as unknown as Record<string, Function>;
 
-      // Try to use typed method on multi for proper argument handling
-      if (typeof (multi as any)[methodName] === 'function') {
-        (multi as any)[methodName](...cmdArgs);
-      } else {
-        // Fallback to addCommand for unsupported commands
-        multi.addCommand([cmd.command, ...cmdArgs.map(serializeArg)]);
-      }
+      if (typeof queue[method] === 'function') queue[method](...cmdArgs);
+      else multi.addCommand(serializeArgs([cmd.command, ...cmdArgs]));
     }
 
     const results = await multi.exec();
-    const executionTime = performance.now() - startTime;
 
-    logCommand(invokingResource, 'MULTI/EXEC', commands, executionTime);
+    logCommand(invokingResource, 'MULTI/EXEC', commands, performance.now() - startTime);
 
-    if (cb) {
-      cb(results);
-    }
+    if (cb) cb(results);
 
     return results;
   } catch (err: any) {
     logError(invokingResource, cb, isPromise, err, 'MULTI/EXEC', commands);
 
-    if (cb && isPromise) {
-      return;
-    }
+    if (cb && isPromise) return;
 
     throw err;
   }

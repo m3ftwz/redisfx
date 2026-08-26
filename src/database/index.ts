@@ -16,6 +16,5 @@ setInterval(() => {
   setDebug();
 }, 1000);
 
-export * from './connection';
 export * from './execute';
 export * from './pool';
