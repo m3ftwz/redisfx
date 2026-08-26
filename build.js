@@ -15,7 +15,7 @@ writeFileSync(
     timeZone: 'UTC',
     timeStyle: 'long',
     dateStyle: 'full',
-  })
+  }),
 );
 
 writeFileSync(
@@ -51,10 +51,15 @@ convar_category 'RedisFX' {
 	'Configuration',
 	{
 		{ 'Connection string', 'redis_connection_string', 'CV_STRING', 'redis://localhost:6379/0' },
-		{ 'Debug', 'redis_debug', 'CV_BOOL', 'false' }
+		{ 'Debug', 'redis_debug', 'CV_BOOL', 'false' },
+		{ 'Web UI', 'redis_ui', 'CV_BOOL', 'false' },
+		{ 'Slow command warning (ms)', 'redis_slow_query_warning', 'CV_INT', '200' },
+		{ 'Command queue timeout (ms, 0 disables)', 'redis_command_timeout', 'CV_INT', '5000' },
+		{ 'RESP protocol version', 'redis_resp', 'CV_INT', '3' },
+		{ 'Version check', 'redis_versioncheck', 'CV_BOOL', 'true' }
 	}
 }
-`
+`,
 );
 
 build({

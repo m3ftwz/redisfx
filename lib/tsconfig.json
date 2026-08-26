@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "outDir": ".",
     "strict": true,
-    "module": "CommonJS",
+    "skipLibCheck": true,
+    "module": "node16",
     "types": ["@citizenfx/server"],
     "declaration": true,
     "sourceMap": true,
@@ -14,8 +14,7 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "rootDir": ".",
-    "moduleResolution": "node",
-    "experimentalDecorators": true,
+    "moduleResolution": "node16",
     "noImplicitAny": false,
     "noEmit": false
   },
