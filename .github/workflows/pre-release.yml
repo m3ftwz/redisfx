@@ -7,26 +7,22 @@ on:
         description: 'Version tag'
         required: true
 
+permissions:
+  contents: write
+
 jobs:
   create-release:
-    if: github.actor_id != 210085057
     runs-on: ubuntu-latest
     steps:
       - name: Install zip
-        run: sudo apt install zip
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
+        run: sudo apt-get install -y zip
 
       - name: Generate GitHub App token
         id: app_token
-        uses: tibdex/github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+          app-id: ${{ vars.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Get latest code
         uses: actions/checkout@v4
@@ -35,24 +31,26 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           token: ${{ steps.app_token.outputs.token }}
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Run build script
+      - name: Run tests
+        run: bun run test
+
+      - name: Build
         run: bun run build
         env:
           TGT_RELEASE_VERSION: ${{ github.event.inputs.tag }}
-
-
-      - name: Push version bump change
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: package.json
-          push: true
-          default_author: github_actions
-          message: 'chore: bump version to ${{ github.event.inputs.tag }}'
-
 
       - name: Bundle files
         run: |
