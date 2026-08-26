@@ -28,7 +28,7 @@ export function logError(
   err: any | string = '',
   command?: string,
   args?: any[],
-  includeArgs?: boolean
+  includeArgs?: boolean,
 ) {
   const message = typeof err === 'object' ? err.message : err.replace(/SCRIPT ERROR: citizen:[\w\/\.]+:\d+[:\s]+/, '');
 
@@ -65,19 +65,14 @@ export function logError(
 
 const logStorage: CommandLog = {};
 
-export const logCommand = (
-  invokingResource: string,
-  command: string,
-  args: any[],
-  executionTime: number
-) => {
+export const logCommand = (invokingResource: string, command: string, args: any[], executionTime: number) => {
   if (
     executionTime >= redis_slow_query_warning ||
     (redis_debug && (!Array.isArray(redis_debug) || redis_debug.includes(invokingResource)))
   ) {
     const argsStr = args && args.length > 0 ? ` ${JSON.stringify(args)}` : '';
     console.log(
-      `${redisVersion} ^3${invokingResource} took ${executionTime.toFixed(4)}ms to execute a command!\n${command}${argsStr}^0`
+      `${redisVersion} ^3${invokingResource} took ${executionTime.toFixed(4)}ms to execute a command!\n${command}${argsStr}^0`,
     );
   }
 
@@ -131,7 +126,7 @@ RegisterCommand(
       chartData,
     });
   },
-  true
+  true,
 );
 
 const sortCommands = (commands: CommandData[], sort: { id: 'command' | 'executionTime'; desc: boolean }) => {
@@ -159,16 +154,22 @@ onNet(
   }) => {
     if (typeof data.resource !== 'string' || !IsPlayerAceAllowed(source as unknown as string, 'command.redis')) return;
 
+    // A client can name any resource, including one that has never logged a command.
+    const storedLog = logStorage[data.resource];
+    if (!storedLog) return;
+
     if (data.search) data.search = data.search.toLowerCase();
 
     const resourceLog = data.search
-      ? logStorage[data.resource].filter((c) => c.command.toLowerCase().includes(data.search))
-      : logStorage[data.resource];
+      ? storedLog.filter((c) => c.command.toLowerCase().includes(data.search))
+      : storedLog;
 
     const sort = data.sortBy && data.sortBy.length > 0 ? data.sortBy[0] : false;
     const startRow = data.pageIndex * 10;
     const endRow = startRow + 10;
-    const commands = sort ? sortCommands(resourceLog, sort).slice(startRow, endRow) : resourceLog.slice(startRow, endRow);
+    const commands = sort
+      ? sortCommands(resourceLog, sort).slice(startRow, endRow)
+      : resourceLog.slice(startRow, endRow);
     const pageCount = Math.ceil(resourceLog.length / 10);
 
     if (!commands) return;
@@ -191,5 +192,5 @@ onNet(
       resourceSlowCommands,
       resourceTime,
     });
-  }
+  },
 );

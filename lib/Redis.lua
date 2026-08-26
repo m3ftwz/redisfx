@@ -29,7 +29,6 @@ local function await(fn, ...)
 	return Await(p)
 end
 
-local type = type
 local redisfx = exports['redisfx']
 
 local redis_method_mt = {
@@ -49,82 +48,63 @@ local Redis = setmetatable(Redis or {}, {
 	end
 })
 
--- String commands
-for _, method in pairs({
-	'get', 'set', 'del', 'exists', 'expire', 'ttl', 'incr', 'incrby', 'decr', 'decrby', 'mget', 'mset',
-}) do
-	Redis[method] = setmetatable({
-		method = method,
-		await = function(...)
-			return await(redisfx[method], ...)
-		end
-	}, redis_method_mt)
-end
+--- Every export exposed by the resource. Each becomes `Redis.<name>(...)` for the callback style
+--- and `Redis.<name>.await(...)` / `Redis.Sync.<name>(...)` for the blocking style.
+local methods = {
+	-- String
+	'get', 'set', 'getdel', 'getex', 'getrange', 'setrange', 'append', 'strlen', 'setnx',
+	'incr', 'incrby', 'incrbyfloat', 'decr', 'decrby', 'mget', 'mset', 'msetnx',
 
--- Hash commands
-for _, method in pairs({
-	'hget', 'hset', 'hmset', 'hgetall', 'hdel', 'hincrby', 'hexists', 'hkeys', 'hvals', 'hlen',
-}) do
-	Redis[method] = setmetatable({
-		method = method,
-		await = function(...)
-			return await(redisfx[method], ...)
-		end
-	}, redis_method_mt)
-end
+	-- Key
+	'del', 'unlink', 'exists', 'touch', 'expire', 'pexpire', 'expireat', 'pexpireat',
+	'expiretime', 'pexpiretime', 'ttl', 'pttl', 'persist', 'type', 'rename', 'renamenx',
+	'randomkey', 'keys', 'copy', 'scan', 'objectEncoding', 'memoryUsage', 'dump', 'restore',
 
--- List commands
-for _, method in pairs({
-	'lpush', 'rpush', 'lpop', 'rpop', 'lrange', 'llen', 'lindex', 'lset', 'lrem',
-}) do
-	Redis[method] = setmetatable({
-		method = method,
-		await = function(...)
-			return await(redisfx[method], ...)
-		end
-	}, redis_method_mt)
-end
+	-- Hash
+	'hget', 'hset', 'hsetnx', 'hmset', 'hgetall', 'hmget', 'hdel', 'hincrby', 'hincrbyfloat',
+	'hexists', 'hkeys', 'hvals', 'hlen', 'hstrlen', 'hrandfield', 'hscan',
+	-- Hash field expiration (Redis 7.4+) and HGETEX/HGETDEL (Redis 8.0+)
+	'hexpire', 'hpexpire', 'hexpireat', 'hpexpireat', 'httl', 'hpttl', 'hpersist',
+	'hgetex', 'hgetdel',
 
--- Set commands
-for _, method in pairs({
-	'sadd', 'srem', 'smembers', 'sismember', 'scard', 'spop', 'srandmember',
-}) do
-	Redis[method] = setmetatable({
-		method = method,
-		await = function(...)
-			return await(redisfx[method], ...)
-		end
-	}, redis_method_mt)
-end
+	-- List
+	'lpush', 'rpush', 'lpushx', 'rpushx', 'lpop', 'rpop', 'lrange', 'llen', 'lindex', 'lset',
+	'lrem', 'ltrim', 'lpos', 'linsert', 'lmove', 'rpoplpush', 'lmpop',
 
--- Sorted set commands
-for _, method in pairs({
-	'zadd', 'zrange', 'zrangeWithScores', 'zrem', 'zscore', 'zrank', 'zcard', 'zincrby',
-}) do
-	Redis[method] = setmetatable({
-		method = method,
-		await = function(...)
-			return await(redisfx[method], ...)
-		end
-	}, redis_method_mt)
-end
+	-- Set
+	'sadd', 'srem', 'smembers', 'sismember', 'smismember', 'scard', 'spop', 'smove',
+	'srandmember', 'sinter', 'sunion', 'sdiff', 'sintercard', 'sinterstore', 'sunionstore',
+	'sdiffstore', 'sscan',
 
--- Key commands
-for _, method in pairs({
-	'keys', 'scan', 'type', 'rename', 'persist', 'pttl', 'expireat',
-}) do
-	Redis[method] = setmetatable({
-		method = method,
-		await = function(...)
-			return await(redisfx[method], ...)
-		end
-	}, redis_method_mt)
-end
+	-- Sorted set
+	'zadd', 'zrange', 'zrangeWithScores', 'zrangebyscore', 'zrangestore', 'zrem', 'zscore',
+	'zmscore', 'zrank', 'zrevrank', 'zcard', 'zcount', 'zlexcount', 'zincrby', 'zpopmin',
+	'zpopmax', 'zrandmember', 'zdiff', 'zinter', 'zunion', 'zintercard', 'zremrangebyrank',
+	'zremrangebyscore', 'zremrangebylex', 'zscan',
 
--- Server and other commands
-for _, method in pairs({
-	'ping', 'flushdb', 'dbsize', 'multi', 'raw',
-}) do
+	-- Bitmap / HyperLogLog
+	'setbit', 'getbit', 'bitcount', 'bitpos', 'bitop', 'pfadd', 'pfcount', 'pfmerge',
+
+	-- Streams
+	'xadd', 'xlen', 'xrange', 'xrevrange', 'xdel', 'xtrim', 'xack',
+
+	-- Scripting
+	'eval', 'evalsha', 'scriptLoad', 'fcall', 'fcallRo',
+
+	-- Pub/Sub - subscribed messages arrive as the `redisfx:message` server event
+	'publish', 'spublish', 'subscribe', 'unsubscribe',
+
+	-- Transactions
+	'multi',
+
+	-- Server
+	'ping', 'time', 'dbsize', 'flushdb', 'flushall', 'info', 'configGet',
+
+	-- Raw
+	'raw',
+}
+
+for _, method in ipairs(methods) do
 	Redis[method] = setmetatable({
 		method = method,
 		await = function(...)
@@ -153,7 +133,11 @@ local function onReady(cb)
 		Wait(50)
 	end
 
-	redisfx.awaitConnection()
+	-- The resource being started only means the script loaded; wait for the socket as well so a
+	-- ready callback can issue commands immediately.
+	while not redisfx.isReady() do
+		Wait(50)
+	end
 
 	return cb and cb() or true
 end
