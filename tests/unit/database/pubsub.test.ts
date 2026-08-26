@@ -152,3 +152,36 @@ describe('resource lifecycle', () => {
     expect(client.duplicates).toHaveLength(2);
   });
 });
+
+describe('failure paths', () => {
+  test('a subscriber that cannot connect does not become the cached connection', async () => {
+    // The first duplicate is created and fails to connect; a later subscribe must build a new one
+    // rather than reusing the dead handle.
+    client.duplicateFailure = new Error('ECONNREFUSED');
+
+    await expect(subscribe('res', ['chan'], {})).rejects.toThrow('ECONNREFUSED');
+
+    client.duplicateFailure = undefined;
+    await expect(subscribe('res', ['chan'], {})).resolves.toBe(true);
+    expect(client.duplicates).toHaveLength(2);
+  });
+
+  test('an unsubscribe failure is reported through the callback in promise mode', async () => {
+    await subscribe('res', ['chan'], {});
+    sub().failures.unsubscribe = new Error('cannot leave');
+
+    const seen: unknown[][] = [];
+    await expect(
+      unsubscribe('res', ['chan'], {}, (r: unknown, e?: string) => seen.push([r, e]), true),
+    ).resolves.toBeUndefined();
+
+    expect(String(seen[0][1])).toContain('cannot leave');
+  });
+
+  test('an unsubscribe failure rethrows without a promise-mode callback', async () => {
+    await subscribe('res', ['chan2'], {});
+    sub().failures.unsubscribe = new Error('cannot leave');
+
+    await expect(unsubscribe('res', ['chan2'], {})).rejects.toThrow('cannot leave');
+  });
+});

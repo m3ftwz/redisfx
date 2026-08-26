@@ -215,3 +215,99 @@ describe('redis command and UI events', () => {
     expect(getEmitNetCalls()).toHaveLength(0);
   });
 });
+
+describe('fetchResource sorting and filtering', () => {
+  test('sorts by command name, ascending and descending', () => {
+    configure({ redis_ui: 'true' });
+    (globalThis as any).IsPlayerAceAllowed = () => true;
+
+    logCommand('sort-res', 'GET', ['k'], 1);
+    logCommand('sort-res', 'ZADD', ['k'], 1);
+    logCommand('sort-res', 'HSET', ['k'], 1);
+
+    getNetHandler('redisfx:fetchResource')({
+      resource: 'sort-res',
+      pageIndex: 0,
+      search: '',
+      sortBy: [{ id: 'command', desc: false }],
+    });
+
+    getNetHandler('redisfx:fetchResource')({
+      resource: 'sort-res',
+      pageIndex: 0,
+      search: '',
+      sortBy: [{ id: 'command', desc: true }],
+    });
+    restoreConsole();
+
+    const asc = getEmitNetCalls()[0][2].commands.map((c: any) => c.command);
+    const desc = getEmitNetCalls()[1][2].commands.map((c: any) => c.command);
+
+    expect(asc).toEqual(['GET', 'HSET', 'ZADD']);
+    expect(desc).toEqual(['ZADD', 'HSET', 'GET']);
+  });
+
+  test('sorts by execution time', () => {
+    configure({ redis_ui: 'true' });
+    (globalThis as any).IsPlayerAceAllowed = () => true;
+
+    logCommand('time-res', 'SLOW', ['k'], 30);
+    logCommand('time-res', 'FAST', ['k'], 1);
+
+    getNetHandler('redisfx:fetchResource')({
+      resource: 'time-res',
+      pageIndex: 0,
+      search: '',
+      sortBy: [{ id: 'executionTime', desc: false }],
+    });
+    restoreConsole();
+
+    expect(getEmitNetCalls()[0][2].commands.map((c: any) => c.command)).toEqual(['FAST', 'SLOW']);
+  });
+
+  test('an unknown sort id leaves the order untouched', () => {
+    configure({ redis_ui: 'true' });
+    (globalThis as any).IsPlayerAceAllowed = () => true;
+
+    logCommand('noop-res', 'A', ['k'], 1);
+    logCommand('noop-res', 'B', ['k'], 1);
+
+    getNetHandler('redisfx:fetchResource')({
+      resource: 'noop-res',
+      pageIndex: 0,
+      search: '',
+      sortBy: [{ id: 'nonsense', desc: false } as any],
+    });
+    restoreConsole();
+
+    expect(getEmitNetCalls()[0][2].commands.map((c: any) => c.command)).toEqual(['A', 'B']);
+  });
+
+  test('filters by a case-insensitive search term', () => {
+    configure({ redis_ui: 'true' });
+    (globalThis as any).IsPlayerAceAllowed = () => true;
+
+    logCommand('search-res', 'HGETALL', ['k'], 1);
+    logCommand('search-res', 'SET', ['k'], 1);
+
+    getNetHandler('redisfx:fetchResource')({ resource: 'search-res', pageIndex: 0, search: 'hget' });
+    restoreConsole();
+
+    const payload = getEmitNetCalls()[0][2];
+    expect(payload.commands.map((c: any) => c.command)).toEqual(['HGETALL']);
+    expect(payload.resourceCommandsCount).toBe(1);
+  });
+
+  test('trims the log once it exceeds redis_log_size', () => {
+    configure({ redis_ui: 'true', redis_log_size: 3 });
+
+    for (let i = 0; i < 10; i++) logCommand('trim-res', `C${i}`, ['k'], 1);
+
+    (globalThis as any).IsPlayerAceAllowed = () => true;
+    getNetHandler('redisfx:fetchResource')({ resource: 'trim-res', pageIndex: 0, search: '' });
+    restoreConsole();
+
+    // the buffer drops one entry per push once it is over the cap
+    expect(getEmitNetCalls()[0][2].resourceCommandsCount).toBeLessThanOrEqual(5);
+  });
+});

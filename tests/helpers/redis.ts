@@ -31,6 +31,7 @@ export interface FakeClient {
   reset: () => void;
   duplicates: FakeClient[];
   listeners: Function[];
+  duplicateFailure?: unknown;
   [command: string]: any;
 }
 
@@ -122,9 +123,11 @@ export function createFakeClient(methods: string[] = DEFAULT_METHODS): FakeClien
 
     duplicate() {
       const copy = createFakeClient(methods);
+      if (client.duplicateFailure) copy.failures.connect = client.duplicateFailure;
       client.duplicates.push(copy);
       return copy;
     },
+    duplicateFailure: undefined as unknown,
     duplicates: [] as FakeClient[],
 
     async connect() {
@@ -174,6 +177,7 @@ export function createFakeClient(methods: string[] = DEFAULT_METHODS): FakeClien
     },
     async unsubscribe(channels: string[]) {
       calls.push({ method: 'unsubscribe', args: [channels] });
+      if ('unsubscribe' in client.failures) throw client.failures.unsubscribe;
     },
     async pUnsubscribe(channels: string[]) {
       calls.push({ method: 'pUnsubscribe', args: [channels] });
@@ -192,6 +196,7 @@ export function createFakeClient(methods: string[] = DEFAULT_METHODS): FakeClien
       client.duplicates.length = 0;
       client.listeners.length = 0;
       client.destroyed = 0;
+      client.duplicateFailure = undefined;
       for (const key of Object.keys(client.results)) delete client.results[key];
       for (const key of Object.keys(client.failures)) delete client.failures[key];
       for (const key of Object.keys(handlers)) delete handlers[key];

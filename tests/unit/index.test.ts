@@ -246,3 +246,63 @@ describe('resource lifecycle', () => {
     expect(pubsubCalls.entries).toEqual([['close']]);
   });
 });
+
+describe('command factory shapes', () => {
+  test('cmdKeyList wraps a scalar member into the variadic list', async () => {
+    await getExport('sadd')('s', 'one');
+    expect(calls[0]).toMatchObject({ command: 'SADD', args: ['s', ['one']] });
+
+    calls.length = 0;
+    await getExport('hdel')('h', ['a', 'b']);
+    expect(calls[0]).toMatchObject({ command: 'HDEL', args: ['h', ['a', 'b']] });
+  });
+
+  test('cmd4 forwards four positional arguments', async () => {
+    await getExport('linsert')('l', 'BEFORE', 'pivot', 'value');
+    expect(calls[0]).toMatchObject({ command: 'LINSERT', args: ['l', 'BEFORE', 'pivot', 'value'] });
+
+    calls.length = 0;
+    await getExport('lmove')('src', 'dst', 'LEFT', 'RIGHT');
+    expect(calls[0]).toMatchObject({ command: 'LMOVE', args: ['src', 'dst', 'LEFT', 'RIGHT'] });
+  });
+
+  test('cmd1Opt appends its options object only when present', async () => {
+    await getExport('getex')('k', { EX: 60 });
+    expect(calls[0]).toMatchObject({ command: 'GETEX', args: ['k', { EX: 60 }] });
+
+    calls.length = 0;
+    await getExport('bitcount')('k');
+    expect(calls[0]).toMatchObject({ command: 'BITCOUNT', args: ['k'] });
+
+    calls.length = 0;
+    const seen: unknown[] = [];
+    await getExport('sintercard')(['a', 'b'], (r: unknown) => seen.push(r));
+    expect(calls[0].args).toEqual([['a', 'b']]);
+    expect(seen).toEqual(['RESULT']);
+  });
+
+  test('cmd2Opt appends its options object only when present', async () => {
+    await getExport('hscan')('h', '0', { COUNT: 10 });
+    expect(calls[0]).toMatchObject({ command: 'HSCAN', args: ['h', '0', { COUNT: 10 }] });
+
+    calls.length = 0;
+    await getExport('copy')('a', 'b');
+    expect(calls[0]).toMatchObject({ command: 'COPY', args: ['a', 'b'] });
+
+    calls.length = 0;
+    const seen: unknown[] = [];
+    await getExport('hgetex')('h', ['f'], (r: unknown) => seen.push(r));
+    expect(calls[0].args).toEqual(['h', ['f']]);
+    expect(seen).toEqual(['RESULT']);
+  });
+
+  test('cmd0 sends no arguments', async () => {
+    await getExport('time')();
+    expect(calls[0]).toMatchObject({ command: 'TIME', args: [] });
+  });
+
+  test('cmdList wraps a scalar key', async () => {
+    await getExport('pfcount')('hll');
+    expect(calls[0]).toMatchObject({ command: 'PFCOUNT', args: [['hll']] });
+  });
+});

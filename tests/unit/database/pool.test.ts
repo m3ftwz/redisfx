@@ -138,3 +138,33 @@ describe('createRedisClient - error log throttling', () => {
     expect(logs.length - before).toBe(2);
   });
 });
+
+describe('createRedisClient - reconnect reporting', () => {
+  test('reports a reconnect once a connection has been established', async () => {
+    // pool.ts keeps `client` as module state, so once any test in this file has connected the
+    // reconnect notice is expected to fire.
+    setConvar('redis_connection_string', 'redis://localhost');
+
+    await createRedisClient();
+    const before = logs.length;
+
+    client().emitEvent('reconnecting');
+    restoreLog();
+
+    expect(logs.slice(before).join('\n')).toContain('reconnecting');
+  });
+
+  test('the suppression counter reports periodically instead of going silent forever', async () => {
+    setConvar('redis_connection_string', 'redis://localhost');
+
+    await createRedisClient();
+    const before = logs.length;
+
+    for (let i = 0; i < 51; i++) client().emitEvent('error', new Error('ECONNREFUSED'));
+    restoreLog();
+
+    const emitted = logs.slice(before);
+    expect(emitted).toHaveLength(2);
+    expect(emitted[1]).toContain('repeated 50 times');
+  });
+});
