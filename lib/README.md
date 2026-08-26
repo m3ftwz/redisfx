@@ -34,25 +34,46 @@ const { redisfx } = require('@m3ftwz/redisfx');
 ```js
 // Callback style
 redisfx.get('player:1:name', (result) => {
-    console.log(result)
-})
+  console.log(result);
+});
 
 // Promise style
-redisfx.get('player:1:name').then((result) => {
-    console.log(result)
-}).catch(console.error)
+redisfx
+  .get('player:1:name')
+  .then((result) => {
+    console.log(result);
+  })
+  .catch(console.error);
 
 // Async/await
-const result = await redisfx.get('player:1:name').catch(console.error)
-console.log(result)
+const result = await redisfx.get('player:1:name').catch(console.error);
+console.log(result);
 
 // Hash operations
-await redisfx.hset('player:1', 'money', 1000)
-const money = await redisfx.hget('player:1', 'money')
+await redisfx.hset('player:1', 'money', 1000);
+const money = await redisfx.hget('player:1', 'money');
 
 // Set with expiry
-await redisfx.set('session:abc', 'data', { EX: 3600 })
+await redisfx.set('session:abc', 'data', { EX: 3600 });
+
+// Hash field expiry (Redis 7.4+)
+await redisfx.hexpire('player:1', 'session', 300);
+
+// Pub/sub - messages arrive as the `redisfx:message` server event
+await redisfx.subscribe('chat:global');
+await redisfx.publish('chat:global', 'hello');
+
+// MULTI/EXEC
+await redisfx.multi([
+  { command: 'SET', args: ['a', '1'] },
+  { command: 'INCR', args: ['a'] },
+]);
+
+// Anything without a named export
+await redisfx.raw('GEOADD', ['places', 13.361389, 38.115556, 'Palermo']);
 ```
+
+See the [full command reference](https://github.com/m3ftwz/redisfx#commands-reference).
 
 ## License
 
