@@ -8,9 +8,13 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   create-release:
-    # github-actions[bot] pushes the version bump commit; do not let that retrigger this workflow.
+    # Belt-and-braces against a bot-authored push retriggering a release.
     if: github.actor_id != 41898282
     runs-on: ubuntu-latest
     steps:
@@ -82,6 +86,14 @@ jobs:
           cp -r ./web/build ./temp/redisfx/web/
           cd ./temp && zip -r ../redisfx.zip ./redisfx
 
+      # Publish first: npm rejects a re-publish of an existing version, so if the token or the
+      # version is wrong it should fail before a user-visible GitHub release is created.
+      - name: Publish lib to npm registry
+        run: npm publish --access public
+        working-directory: lib
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
@@ -89,14 +101,3 @@ jobs:
           prerelease: false
           tag_name: ${{ github.ref_name }}
           files: redisfx.zip
-
-      - name: Update tag
-        uses: EndBug/latest-tag@v1
-        with:
-          ref: ${{ github.ref_name }}
-
-      - name: Publish lib to npm registry
-        run: npm publish --access public
-        working-directory: lib
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
