@@ -6,6 +6,7 @@ on:
       - 'v*.*.*'
 
 permissions:
+  id-token: write # required for npm trusted publishing (OIDC)
   contents: write
 
 concurrency:
@@ -36,9 +37,10 @@ jobs:
           token: ${{ steps.app_token.outputs.token }}
 
       - name: Setup Node.js
+        # Trusted publishing needs npm >= 11.5.1; Node 22 still bundles npm 10.x, Node 24 does not.
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install Bun
@@ -67,16 +69,6 @@ jobs:
           TAG: ${{ github.ref_name }}
         working-directory: lib
 
-      - name: Push version bump change
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: '["package.json", "lib/package.json"]'
-          push: true
-          default_author: github_actions
-          message: 'chore: bump version to ${{ github.ref_name }}'
-        env:
-          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
-
       - name: Bundle files
         run: |
           mkdir -p ./temp/redisfx/{web,lib}
@@ -86,13 +78,12 @@ jobs:
           cp -r ./web/build ./temp/redisfx/web/
           cd ./temp && zip -r ../redisfx.zip ./redisfx
 
-      # Publish first: npm rejects a re-publish of an existing version, so if the token or the
-      # version is wrong it should fail before a user-visible GitHub release is created.
+      # Authenticated by OIDC against the trusted publisher configured on npmjs.com - there is no
+      # NPM_TOKEN to expire. Publishing first means a rejected publish stops the run before
+      # anything user-visible exists.
       - name: Publish lib to npm registry
-        run: npm publish --access public
+        run: npm publish --provenance --access public
         working-directory: lib
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create release
         uses: softprops/action-gh-release@v2
@@ -101,3 +92,14 @@ jobs:
           prerelease: false
           tag_name: ${{ github.ref_name }}
           files: redisfx.zip
+
+      # Last, so a failed publish or release leaves no orphaned bump commit on the default branch.
+      - name: Push version bump change
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: '["package.json", "lib/package.json"]'
+          push: true
+          default_author: github_actions
+          message: 'chore: bump version to ${{ github.ref_name }}'
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
