@@ -1,6 +1,6 @@
 {
   "name": "redisfx",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "FXServer to Redis communication via node-redis",
   "bugs": "https://github.com/m3ftwz/redisfx/issues",
   "license": "LGPL-3.0",
