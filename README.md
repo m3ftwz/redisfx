@@ -1,4 +1,4 @@
-This project was forked from CommunityOx's oxmysql and adapted to use Redis instead of MySQL.
+This project was forked from [Overextended's oxmysql](https://github.com/overextended/oxmysql) and adapted to use Redis instead of MySQL.
 
 # redisfx
 
@@ -85,6 +85,8 @@ host=localhost;port=6379;password=secret;database=0;tls=true
   fails with a normal Redis error — hash-field expiry (`hexpire`, `httl`, `hpersist`) needs 7.4+,
   and `hgetex` / `hgetdel` need 8.0+.
 - FXServer with `node_version '22'` (node-redis v6 requires Node 20+).
+- `blessSet`, `blessGet`, `blessClear`, and `blessScan` require Redis 8.12+;
+  upgrading the client does not add these commands to older servers.
 
 ## Usage
 
@@ -208,6 +210,10 @@ subscribed to it has unsubscribed or stopped.
 `del`, `unlink`, `exists`, `touch`, `expire`, `pexpire`, `expireat`, `pexpireat`, `expiretime`,
 `pexpiretime`, `ttl`, `pttl`, `persist`, `type`, `rename`, `renamenx`, `randomkey`, `keys`, `scan`,
 `copy`, `objectEncoding`, `memoryUsage`, `dump`, `restore`
+
+Key eviction protection (Redis 8.12+): `blessSet(key, 'NO-EVICT')`, `blessGet(key)`,
+`blessClear(key, 'NO-EVICT')`, `blessScan(cursor, 'NO-EVICT', { COUNT = 100 })`.
+`blessGet` returns a list of flags and `blessScan` returns `{ cursor, keys }`.
 
 ### Hashes
 `hget`, `hset`, `hsetnx`, `hmset`, `hgetall`, `hmget`, `hdel`, `hincrby`, `hincrbyfloat`,

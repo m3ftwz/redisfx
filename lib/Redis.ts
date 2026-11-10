@@ -104,6 +104,17 @@ interface RedisFX {
   dump: <T = string | null>(key: string, cb?: Callback<T>) => Promise<T>;
   restore: <T = string>(key: string, ttl: number, serialized: string, cb?: Callback<T>) => Promise<T>;
 
+  // Key eviction protection (Redis 8.12+)
+  blessSet: <T = number>(key: string, flag: 'NO-EVICT', cb?: Callback<T>) => Promise<T>;
+  blessGet: <T = string[]>(key: string, cb?: Callback<T>) => Promise<T>;
+  blessClear: <T = number>(key: string, flag: 'NO-EVICT', cb?: Callback<T>) => Promise<T>;
+  blessScan: <T = ScanReply>(
+    cursor: string | number,
+    flag: 'NO-EVICT',
+    options?: { COUNT?: number } | Callback<T>,
+    cb?: Callback<T>,
+  ) => Promise<T>;
+
   // Hash commands
   hget: <T = string | null>(key: string, field: string, cb?: Callback<T>) => Promise<T>;
   hset: <T = number>(key: string, field: string, value: string | number, cb?: Callback<T>) => Promise<T>;
@@ -573,6 +584,23 @@ export const redisfx: RedisFX = {
   },
   async restore(key, ttl, serialized, cb) {
     const result = await execute('restore', key, ttl, serialized);
+    return cb ? cb(result) : result;
+  },
+  async blessSet(key, flag, cb) {
+    const result = await execute('blessSet', key, flag);
+    return cb ? cb(result) : result;
+  },
+  async blessGet(key, cb) {
+    const result = await execute('blessGet', key);
+    return cb ? cb(result) : result;
+  },
+  async blessClear(key, flag, cb) {
+    const result = await execute('blessClear', key, flag);
+    return cb ? cb(result) : result;
+  },
+  async blessScan(cursor, flag, options, cb) {
+    [options, cb] = safeArgs(options, cb) as any;
+    const result = await execute('blessScan', cursor, flag, options);
     return cb ? cb(result) : result;
   },
 

@@ -25,14 +25,14 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
 
       - name: Get latest code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           ref: ${{ github.event.repository.default_branch }}
           token: ${{ steps.app_token.outputs.token }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '24'
 
@@ -55,7 +55,7 @@ jobs:
       - name: Bundle files
         run: |
           mkdir -p ./temp/redisfx/{web,lib}
-          cp ./{LICENSE,README.md,fxmanifest.lua,ui.lua} ./temp/redisfx
+          cp ./{LICENSE,NOTICE.md,README.md,fxmanifest.lua,ui.lua} ./temp/redisfx
           cp ./lib/Redis.lua ./temp/redisfx/lib
           cp -r ./dist ./logger ./temp/redisfx
           cp -r ./web/build ./temp/redisfx/web/

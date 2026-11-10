@@ -51,6 +51,22 @@ beforeEach(() => {
 });
 
 describe('argument passing', () => {
+  test('forwards BLESS flags and preserves the optional scan callback slot', async () => {
+    const seen: unknown[] = [];
+    await redisfx.blessSet('key', 'NO-EVICT');
+    await redisfx.blessClear('key', 'NO-EVICT');
+    await redisfx.blessScan(0, 'NO-EVICT', (result: unknown) => seen.push(result));
+    await redisfx.blessScan('4', 'NO-EVICT', { COUNT: 10 });
+
+    expect(calls).toEqual([
+      { method: 'blessSet', args: ['key', 'NO-EVICT'] },
+      { method: 'blessClear', args: ['key', 'NO-EVICT'] },
+      { method: 'blessScan', args: [0, 'NO-EVICT', undefined] },
+      { method: 'blessScan', args: ['4', 'NO-EVICT', { COUNT: 10 }] },
+    ]);
+    expect(seen).toEqual(['REPLY']);
+  });
+
   test('forwards positional arguments in order', async () => {
     await redisfx.hset('h', 'field', 'value');
     expect(calls[0]).toEqual({ method: 'hset', args: ['h', 'field', 'value'] });

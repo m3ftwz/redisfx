@@ -157,6 +157,23 @@ Redis.memoryUsage = cmd1('MEMORYUSAGE');
 Redis.dump = cmd1('DUMP');
 Redis.restore = cmd3('RESTORE');
 
+// Key eviction protection (Redis 8.12+)
+Redis.blessSet = cmd2('BLESS_SET');
+Redis.blessGet = cmd1('BLESS_GET');
+Redis.blessClear = cmd2('BLESS_CLEAR');
+Redis.blessScan = (
+  cursor: string | number,
+  flag: 'NO-EVICT',
+  options?: { COUNT?: number } | CFXCallback,
+  cb?: CFXCallback,
+  invokingResource = GetInvokingResource(),
+  isPromise?: boolean,
+) => {
+  const args: any[] = [String(cursor), flag];
+  if (options && typeof options === 'object') args.push(options);
+  return executeCommand(invokingResource, 'BLESS_SCAN', args, setCallback(options, cb), isPromise);
+};
+
 Redis.scan = (
   cursor: string | number,
   options?: ScanOptions | CFXCallback,

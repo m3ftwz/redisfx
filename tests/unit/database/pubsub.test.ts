@@ -17,6 +17,39 @@ beforeEach(() => {
 });
 
 describe('subscribe', () => {
+  test('a failed mixed subscribe preserves an existing subscription owned by the caller', async () => {
+    await subscribe('res', ['existing'], {});
+    sub().failures.subscribe = new Error('NOPERM');
+
+    await expect(subscribe('res', ['existing', 'denied'], {})).rejects.toThrow('NOPERM');
+    delete sub().failures.subscribe;
+
+    await unsubscribe('res', ['existing'], {});
+    expect(
+      sub()
+        .calls.filter((call) => call.method === 'unsubscribe')
+        .map((call) => call.args),
+    ).toEqual([[['existing']]]);
+    await subscribe('res', ['denied'], {});
+    expect(sub().calls.at(-1)?.args).toEqual([['denied']]);
+  });
+
+  test('subscriber socket errors are handled while subscriptions remain usable', async () => {
+    await subscribe('res', ['chan'], {});
+    const messages: string[] = [];
+    const originalLog = console.log;
+    try {
+      console.log = (message) => messages.push(String(message));
+      sub().emitEvent('error', new Error('connection reset'));
+    } finally {
+      console.log = originalLog;
+    }
+
+    expect(messages).toEqual(['^3Redis Subscriber Error: connection reset^0']);
+    sub().listeners[0]('after reconnect', 'chan');
+    expect(getEmitCalls()).toEqual([['redisfx:message', 'chan', 'after reconnect', 'channel']]);
+  });
+
   test('creates and connects a dedicated subscriber connection', async () => {
     await subscribe('res', ['chan'], {});
 

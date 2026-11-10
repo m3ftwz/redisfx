@@ -36,6 +36,22 @@ bun run build        # build the web UI, the bundle, and lib/Redis.js
 
 The unit suite has no external dependencies — the Redis client is faked in `tests/helpers/redis.ts`.
 
+To test the bundled resource against the actual driver, start a disposable Redis server and run:
+
+```sh
+REDIS_TEST_URL=redis://127.0.0.1:6379 bun run test:integration
+```
+
+This runs under Node to avoid the unit suite's Redis mocks and checks both RESP2 and RESP3.
+It creates and deletes keys with a unique `redisfx:test:` prefix. BLESS success cases require
+Redis 8.12+ and are skipped on older servers, where the normal unsupported-command error is checked.
+Without `REDIS_TEST_URL`, the integration suite skips its tests.
+
+The Lua bridge has standalone regression checks for omitted options, callbacks and explicit nils:
+run `lua tests/unit/lib/Redis.test.lua` with Lua 5.4, or
+`npm exec --yes --package=fengari-node-cli -- fengari tests/unit/lib/Redis.test.lua`.
+The Bun suite also verifies every Lua argument count against the registered JS handler.
+
 Note that `mock.module` in Bun is process-global, so every module stub lives in
 `tests/helpers/mocks.ts` and is registered once from the preloaded `tests/setup.ts`. Registering a
 second, differently shaped stub for the same module from an individual test file will break

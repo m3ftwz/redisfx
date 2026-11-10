@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeAll, beforeEach } from 'bun:test';
 import { databaseCalls, pubsubCalls, resetMocks } from '../helpers/mocks';
 import { resetNatives, getExport, getExportNames, getEventHandlers } from '../setup';
+import { readFileSync } from 'node:fs';
 
 const calls = databaseCalls.commands;
 const multiCalls = databaseCalls.multi;
@@ -15,6 +16,22 @@ beforeEach(() => {
 });
 
 describe('export registration', () => {
+  test('Lua argument counts match the registered JS handlers, including optional slots', () => {
+    const lua = readFileSync(new URL('../../lib/Redis.lua', import.meta.url), 'utf8');
+    const methods = lua.match(/local methods = \{([\s\S]*?)\n\}/)![1];
+    const entries = [...methods.matchAll(/(\w+) = (\d+)/g)];
+
+    expect(entries.length).toBeGreaterThan(120);
+    for (const [, name, arity] of entries) {
+      expect(getExport(name)).toBeFunction();
+      expect(Math.max(getExport(name).length - 1, 0)).toBe(Number(arity));
+    }
+    const luaNames = new Set(entries.map(([, name]) => name));
+    for (const name of getExportNames().filter((name) => !name.endsWith('_async') && !name.endsWith('Sync'))) {
+      if (name !== 'isReady' && name !== 'awaitConnection') expect(luaNames.has(name)).toBe(true);
+    }
+  });
+
   test('registers a direct, _async and Sync export for every command', () => {
     const names = getExportNames();
 
@@ -37,6 +54,10 @@ describe('export registration', () => {
       'getdel',
       'getex',
       'copy', // Redis 6.2
+      'blessSet',
+      'blessGet',
+      'blessClear',
+      'blessScan', // Redis 8.12
       'smismember',
       'sintercard',
       'zintercard',
@@ -100,6 +121,27 @@ describe('direct call form', () => {
     calls.length = 0;
     await getExport('scan')(12, { MATCH: 'a*' });
     expect(calls[0].args).toEqual(['12', { MATCH: 'a*' }]);
+  });
+
+  test('bless commands retain their subcommand and normalise scan cursors', async () => {
+    await getExport('blessSet')('protected', 'NO-EVICT');
+    await getExport('blessGet')('protected');
+    await getExport('blessClear')('protected', 'NO-EVICT');
+    await getExport('blessScan_async')(0, 'NO-EVICT');
+    await getExport('blessScan_async')(12, 'NO-EVICT', { COUNT: 100 });
+
+    expect(calls.map(({ command, args }) => ({ command, args }))).toEqual([
+      { command: 'BLESS_SET', args: ['protected', 'NO-EVICT'] },
+      { command: 'BLESS_GET', args: ['protected'] },
+      { command: 'BLESS_CLEAR', args: ['protected', 'NO-EVICT'] },
+      { command: 'BLESS_SCAN', args: ['0', 'NO-EVICT'] },
+      { command: 'BLESS_SCAN', args: ['12', 'NO-EVICT', { COUNT: 100 }] },
+    ]);
+    expect(calls[3]).toMatchObject({ invokingResource: 'test-resource', isPromise: true });
+
+    const seen: unknown[] = [];
+    await getExport('blessScan')(0, 'NO-EVICT', (result: unknown) => seen.push(result));
+    expect(seen).toEqual(['RESULT']);
   });
 
   test('srandmember switches command based on whether a count was given', async () => {

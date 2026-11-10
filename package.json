@@ -27,11 +27,12 @@
     "lib": "tsc --project lib/tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "bun test tests/unit",
+    "test:integration": "node --test tests/integration/*.test.mjs",
     "test:coverage": "bun test tests/unit --coverage"
   },
   "dependencies": {
     "node-fetch": "^3.3.2",
-    "redis": "^6.2.1"
+    "redis": "^6.3.1"
   },
   "devDependencies": {
     "@citizenfx/server": "2.0.29753-1",

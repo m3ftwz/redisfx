@@ -84,6 +84,7 @@ export async function subscribe(
   isPromise?: boolean,
 ) {
   const mode = modeOf(options);
+  const added: string[] = [];
 
   try {
     const conn = await getSubscriber();
@@ -94,11 +95,15 @@ export async function subscribe(
       const owners = registry.get(channel);
 
       if (owners) {
-        owners.add(invokingResource);
+        if (!owners.has(invokingResource)) {
+          owners.add(invokingResource);
+          added.push(channel);
+        }
         continue;
       }
 
       registry.set(channel, new Set([invokingResource]));
+      added.push(channel);
       pending.push(channel);
     }
 
@@ -110,8 +115,9 @@ export async function subscribe(
 
     return true;
   } catch (err: any) {
-    // Do not leave a half-registered channel behind - the next subscribe would think it is live.
-    for (const channel of channels) {
+    // Roll back only ownership added by this attempt. A mixed subscribe can fail while an
+    // earlier subscription owned by this same resource remains active in node-redis.
+    for (const channel of added) {
       const owners = subscriptions[mode].get(channel);
       if (owners?.delete(invokingResource) && owners.size === 0) subscriptions[mode].delete(channel);
     }
